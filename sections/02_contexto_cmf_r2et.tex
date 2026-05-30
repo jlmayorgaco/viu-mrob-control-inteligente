@@ -31,13 +31,13 @@ La celda del Grupo~1 contiene una máquina de proceso, un robot de transferencia
 
 \section{Problema de control}
 
-La dificultad no está en hacer que el robot alterne, sino en decidir \emph{cuánto} alimentar a cada estera y \emph{a qué velocidad} descargarlas. Tres situaciones lo complican:
+Que el robot alterne es lo fácil. Lo difícil es decidir \emph{cuánto} alimentar a cada estera y \emph{a qué velocidad} descargarlas. Tres situaciones lo complican.
 
-Saturación. Si el robot sigue depositando piezas en una estera ya casi llena, el margen se agota en pocas muestras. El control debe anticipar la saturación y redirigir el flujo.
+La primera es la saturación. Si el robot sigue depositando piezas sobre una estera casi llena, el margen se agota en pocas muestras, así que el control tiene que anticiparla y redirigir el flujo antes de que ocurra.
 
-Vaciado. Si la velocidad de descarga es demasiado alta respecto al flujo de entrada, la estera queda vacía y la línea de salida se interrumpe. El nivel objetivo de~1.5~piezas ($50\%$ de la capacidad) centra la operación dejando margen de seguridad en ambos sentidos (frente a saturación y frente a vaciado).
+La segunda es la opuesta, el vaciado: con una descarga demasiado rápida frente al flujo de entrada, la estera se queda vacía y la línea de salida se corta. Por eso el nivel objetivo se fija en $1.5$~piezas, el $50\%$ de la capacidad, que deja margen en ambos sentidos.
 
-Cambio de peso. Piezas más pesadas se mueven con más fricción sobre la estera: la eficiencia de descarga cae hasta un $35\%$ en E1 y un $17.5\%$ en E2 durante el episodio de perturbación. El controlador debe detectar esta caída y compensarla (acelerando la estera, reduciendo la admisión de nuevas piezas o redirigiendo el robot hacia E2) sin esperar a que la estera llegue al umbral de alarma.
+La tercera es el cambio de peso. Las piezas más pesadas rozan más sobre la estera y la eficiencia de descarga cae hasta un $35\%$ en E1 y un $17.5\%$ en E2 mientras dura la perturbación. El controlador debe notar esa caída y reaccionar (acelerar la estera, recortar la admisión o desviar el robot hacia E2) sin esperar a que el nivel toque el umbral de alarma.
 
 \section{Modelo dinámico}
 

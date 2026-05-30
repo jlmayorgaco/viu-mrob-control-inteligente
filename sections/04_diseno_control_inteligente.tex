@@ -3,7 +3,7 @@
 
 \section{4.2.a Selección y justificación de la estrategia de control}
 
-El sistema R2ET tiene no linealidad leve (saturación del actuador), perturbaciones de amplitud conocida pero duración variable, y la necesidad de coordinar dos variables de proceso acopladas a través del reparto del robot. Ninguno de estos rasgos impide usar un PID, pero sí limita su rendimiento: el PID no coordina esteras de forma nativa ni adapta sus parámetros ante la variación de peso. Por eso se evalúan tres alternativas inteligentes junto con el PID como referencia.
+El sistema R2ET reúne tres rasgos incómodos para un control clásico: una no linealidad leve (la saturación del actuador), perturbaciones de amplitud conocida pero duración variable, y dos variables de proceso acopladas por el reparto del robot. Nada de esto impide usar un PID. Lo que hace es limitar su techo, porque un PID no coordina esteras por sí mismo ni reajusta sus parámetros cuando cambia el peso. De ahí que, junto al PID de referencia, se evalúen tres alternativas inteligentes.
 
 \begin{longtable}{@{}P{0.12\linewidth}P{0.22\linewidth}P{0.55\linewidth}@{}}
 \caption{Justificación de cada método de control para el sistema R2ET.}
@@ -18,7 +18,7 @@ Q-Learning & Refuerzo tabular & Aprende la política por interacción con el ent
 \bottomrule
 \end{longtable}
 
-Cada método destaca en un criterio distinto. La lógica difusa es la más recomendable para un despliegue auditable: sus 35~reglas son legibles y modificables por el personal de planta sin herramientas de aprendizaje automático. El PID retuneado da el menor IAE en la coordinación de dos esteras; el Q-Learning es el más eficiente en energía y el más robusto; y la red profunda ofrece el mejor compromiso en el lazo servo (IAE $2\times$ menor que el PID en Fase~1, con el mando más suave y sin saturar) y, en la coordinación, el mayor margen de seguridad y productividad.
+Cada método gana en un terreno distinto. El difuso es el más indicado para un despliegue auditable, porque sus 35~reglas las lee y las retoca el personal de planta sin herramientas de aprendizaje automático. El PID retuneado, en cambio, marca el menor IAE de la coordinación de dos esteras. El Q-Learning se lleva la eficiencia energética y la robustez. Y la red profunda combina lo mejor de ambos mundos: el mejor compromiso del lazo servo (IAE la mitad que el PID en Fase~1, con el mando más suave y sin saturar) y, en la coordinación, el mayor margen de seguridad y productividad.
 
 \section{4.2.b Variables, universos de discurso y señales de retroalimentación}
 
@@ -152,7 +152,7 @@ Dado el sistema $y(k+1)=A\,y(k)+B\,u(k)$ y la pérdida IAE $L=\sum|y(k)-r|$, el 
 
 Este gradiente se retropropaga luego a través de la red (backprop estándar) y los pesos se actualizan con Adam con cosine LR annealing.
 
-Intuición y pasos. La dificultad es que cada acción $u(k)$ afecta no solo al error inmediato, sino a toda la trayectoria posterior de $y$; por eso no basta con derivar muestra a muestra. El co-estado $\lambda(k)$ resume \emph{cuánto} contribuye el estado en el instante $k$ al error total acumulado hasta el final del episodio. El cálculo tiene tres pasos:
+Intuición. Cada acción $u(k)$ no afecta solo al error de ese instante: arrastra toda la trayectoria posterior de $y$. Derivar muestra a muestra, por tanto, no basta. El co-estado $\lambda(k)$ resume justo eso, cuánto pesa el estado del instante $k$ en el error acumulado hasta el final del episodio. El cálculo va en tres pasos:
 \begin{enumerate}
   \item Pasada hacia adelante: se simula el episodio completo con la red actual y se guardan $y(k)$, $u(k)$ y las activaciones de la red.
   \item Pasada hacia atrás: se parte de $\lambda(T)$ (el error en el instante final) y se recorre el tiempo en sentido inverso; en cada paso se suma el error local más la contribución que llega del futuro, $A\,\lambda(k+1)$. Es la misma idea de \emph{backpropagation through time}.
