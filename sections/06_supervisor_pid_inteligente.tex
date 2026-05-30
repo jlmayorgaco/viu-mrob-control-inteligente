@@ -1,0 +1,150 @@
+\chapter[4.2.d Sistema supervisor inteligente]{4.2.d Sistema supervisor inteligente para optimización del PID local}
+\label{ch:supervisor}
+
+El supervisor ocupa el nivel~2 de la jerarquía de control: observa el estado global de la celda y actúa sobre el controlador primario (sea cual sea) cuando la ocupación de las esteras o la señal de perturbación indica que el régimen nominal ya no es suficiente.
+
+Qué es el supervisor. En su implementación es un sistema basado en reglas con tres estados de operación (una máquina de estados sobre el nivel de congestión: \emph{Normal}, \emph{Riesgo} y \emph{Alarma}) que realiza programación de ganancias (\emph{gain scheduling}) del PID y ajusta la admisión de piezas, complementado por un bloque difuso Mamdani que decide el reparto del robot entre esteras. No es una red neuronal ni una caja negra: toda su lógica son umbrales y factores fijos, explícitos y auditables, lo que es un requisito deseable para una capa de seguridad. Su diseño sigue dos capas: una capa de ajuste adaptativo (modifica las ganancias del PID o condiciona la salida de Fuzzy/DL/QL) y una capa dura de seguridad de capacidad que actúa siempre, con independencia del controlador activo.
+
+\section{Variables de supervisión}
+
+El supervisor monitoriza continuamente las siguientes señales en cada muestra $k$:
+
+\begin{longtable}{@{}P{0.20\linewidth}P{0.15\linewidth}P{0.53\linewidth}@{}}
+\caption{Variables de supervisión y sus umbrales de actuación.}
+\label{tab:sv_variables}\\
+\toprule
+Variable & Umbral & Descripción y acción del supervisor \\ \midrule \endfirsthead
+\toprule Variable & Umbral & Descripción \\ \midrule \endhead
+$n_{max}(k) = \max(n_1,n_2)$ & 2.4 (riesgo) & Ajuste suave: $u_i\!+\!0.07$ y admisión $a=0.90$.\\
+$n_{max}(k)$ & 2.7 (alarma) & Emergencia de capacidad: $u_i\!+\!0.14$ y admisión $a=0.72$.\\
+$d(k) \in \{0,1\}$ & $d > 0$ (sin alarma) & Perturbación activa: $u_i\!+\!0.14$ y admisión $a=0.86$.\\
+$b(k) = n_1 - n_2$ & $|b| > 0.15$ & Desequilibrio entre esteras: ajusta reparto $r_1$.\\
+$a_{acum}(k)$ & Cualquier & Admisión acumulada; evita bloqueo prolongado.\\
+\bottomrule
+\end{longtable}
+
+\section{Criterios de ajuste automático del PID}
+
+El supervisor adapta las ganancias del PID en función del estado de congestión de la celda. Se definen tres regímenes de operación:
+
+\begin{longtable}{@{}P{0.16\linewidth}P{0.20\linewidth}P{0.10\linewidth}P{0.10\linewidth}P{0.36\linewidth}@{}}
+\caption{Ajuste dinámico de ganancias PID según régimen de operación.}
+\label{tab:sv_pid_gains}\\
+\toprule
+Régimen & Condición & $f_{Kp}$ & $f_{Ki}$ & Justificación \\ \midrule \endfirsthead
+\toprule Régimen & Condición & $f_{Kp}$ & $f_{Ki}$ & Justificación \\ \midrule \endhead
+Normal & $n_{max}\!\leq\!2.4$ y $d=0$ & $1.0$ & $1.0$ & Control nominal; sin modificación.\\
+Riesgo & $n_{max}\!>\!2.4$ o $d=0^+$ & $1.25$ & $0.82$ & Proporcional aumentado para respuesta rápida; integral reducida para evitar windup en la rampa de subida.\\
+Alarma & $n_{max}\!>\!2.7$ o $d>0$ & $1.55$ & $0.65$ & Máxima acción proporcional; integral mínima para respuesta de emergencia.\\
+\bottomrule
+\end{longtable}
+
+Las ganancias ajustadas son $K_p' = K_p \cdot f_{Kp}$ y $K_i' = K_i \cdot f_{Ki}$, con los valores nominales $K_p=1.3$, $K_i=0.18$, $K_d=0.28$ (reajustados por búsqueda).
+
+\section{Capa de supervisión de capacidad (hardware de seguridad)}
+
+Independientemente del controlador primario activo, la capa de supervisión de capacidad actúa como capa de seguridad que no puede eludirse. Su lógica es:
+
+\begin{align}
+\text{Si } n_{max}(k) > N_{alarm}: &\quad u_i(k) = \operatorname{sat}(u_i^* + 0.14,\, 0.05,\, 1.0),\quad a(k) = 0.72 \\
+\text{Si } d>0 \text{ (sin alarma de capacidad)}: &\quad u_i(k) = \operatorname{sat}(u_i^* + 0.14,\, 0.05,\, 1.0),\quad a(k) = 0.86 \\
+\text{Si } n_{max}(k) > N_{risk}: &\quad u_i(k) = \operatorname{sat}(u_i^* + 0.07,\, 0.05,\, 1.0),\quad a(k) = 0.90 \\
+\text{Si no}: &\quad u_i(k) = u_i^*,\quad a(k) = 1.0
+\end{align}
+
+El refuerzo de velocidad ($u_i\!+\!0.14$) y el ajuste de ganancias del PID ($f_{Kp}{=}1.55$, $f_{Ki}{=}0.65$)
+se activan tanto por alarma de capacidad como por perturbación; sólo la fracción de admisión distingue
+ambos casos ($a=0.72$ por capacidad crítica frente a $a=0.86$ por perturbación sin alarma).
+
+La Figura~\ref{fig:supervisor_flow} muestra el flujo de decisión del supervisor integrado.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[>=Latex, every node/.style={font=\scriptsize}]
+  \tikzset{
+    start/.style={draw, ellipse, fill=UniPrimary!15, draw=UniPrimaryDeep, minimum width=30mm, minimum height=10mm, align=center},
+    dec/.style={draw, diamond, fill=UniLight, draw=UniPrimaryDeep, minimum width=30mm, minimum height=14mm, align=center, aspect=2.4},
+    act/.style={draw, rounded corners=1.5mm, fill=UniLight, draw=UniMuted, minimum width=42mm, minimum height=11mm, align=center},
+    arr/.style={->, line width=0.85pt, color=UniPrimaryDeep},
+    wire/.style={line width=0.85pt, color=UniPrimaryDeep},
+    lbl/.style={font=\tiny, fill=white, inner sep=1pt}
+  }
+  % Columna principal (decisiones y normal)
+  \node[start] (in)  at (0, 0)     {Inicio ciclo $k$:\\leer $n_1,n_2,d$};
+  \node[dec]   (d1)  at (0,-2.0)   {$n_{max}>2.7$\\o $d>0$?};
+  \node[dec]   (d2)  at (0,-4.2)   {$n_{max}>2.4$?};
+  \node[act]   (a3)  at (0,-6.3)   {NORMAL: $f_{Kp}{=}1.0$, $f_{Ki}{=}1.0$\\$u$ sin cambio, $a{=}1.0$};
+  \coordinate  (mrg) at (0,-7.6);
+  \node[dec]   (d3)  at (0,-9.1)   {$|b|>0.15$?};
+  \node[start] (out) at (0,-11.1)  {Ejecutar acción\\$u_i,\,r_1,\,a$};
+  % Acciones a la derecha
+  \node[act]   (a1)  at (5.6,-2.0) {ALARMA/PERT.\\$f_{Kp}{=}1.55$, $f_{Ki}{=}0.65$\\$u{+}{=}0.14$,\; $a{=}0.72/0.86$};
+  \node[act]   (a2)  at (5.6,-4.2) {RIESGO\\$f_{Kp}{=}1.25$, $f_{Ki}{=}0.82$\\$u{+}{=}0.07$,\; $a{=}0.90$};
+  \node[act]   (a4)  at (5.6,-9.1) {Ajustar reparto:\\$r_1=f(b)$ difuso};
+  % Flujo principal
+  \draw[arr] (in.south) -- (d1.north);
+  \draw[arr] (d1.south) -- node[lbl,right]{NO} (d2.north);
+  \draw[arr] (d2.south) -- node[lbl,right]{NO} (a3.north);
+  \draw[arr] (a3.south) -- (mrg);
+  \draw[arr] (mrg) -- (d3.north);
+  \draw[arr] (d3.south) -- node[lbl,right]{NO} (out.north);
+  % Ramas SÍ (horizontales, sin cruces)
+  \draw[arr] (d1.east) -- node[lbl,above]{SÍ} (a1.west);
+  \draw[arr] (d2.east) -- node[lbl,above]{SÍ} (a2.west);
+  \draw[arr] (d3.east) -- node[lbl,above]{SÍ} (a4.west);
+  % Bus de retorno de a1 y a2 hacia el punto de fusión (mrg)
+  \draw[wire] (a1.east) -- (8.0,-2.0);
+  \draw[wire] (a2.east) -- (8.0,-4.2);
+  \draw[wire] (8.0,-2.0) -- (8.0,-7.6);
+  \draw[arr]  (8.0,-7.6) -- (mrg);
+  \fill[UniPrimaryDeep] (mrg) circle (1.3pt);
+  % Retorno de a4 a la salida (entra por la derecha)
+  \draw[arr] (a4.south) |- (out.east);
+\end{tikzpicture}
+\caption{Flujo de decisión del supervisor inteligente en cada ciclo de muestreo $k$.}
+\label{fig:supervisor_flow}
+\end{figure}
+
+\simulinkfigure{figures/simulink/sl_supervisor_pid.png}{0.9}{Modelo Simulink del supervisor inteligente que optimiza el PID local (4.2.d): el PID regula la ocupación y el supervisor ajusta sus ganancias por régimen (normal/riesgo/alarma), reduce la admisión y redirige el robot; la capa dura de capacidad permanece siempre activa.}
+
+\section{Análisis de perturbaciones y fallos}
+
+El supervisor contempla los siguientes modos de perturbación/fallo y sus estrategias de compensación:
+
+\begin{longtable}{@{}P{0.27\linewidth}P{0.25\linewidth}P{0.36\linewidth}@{}}
+\caption{Modos de perturbación, síntomas y estrategia de compensación del supervisor.}
+\label{tab:sv_faults}\\
+\toprule
+Perturbación / Fallo & Síntoma & Estrategia del supervisor \\ \midrule \endfirsthead
+\toprule Perturbación / Fallo & Síntoma & Estrategia \\ \midrule \endhead
+Cambio de peso en piezas (más pesadas) & $n_i$ aumenta rápidamente; $\dot{n}_i > 0$ sostenido. & Activar régimen de alarma: aumentar $u$, reducir admisión $a$, redirigir robot a estera más vacía.\\
+Pulso de alta demanda & Ambas $n_i$ suben en paralelo. & Aumentar velocidad de ambas esteras; mantener reparto equilibrado; reducir admisión si $n_{max} > 2.4$.\\
+Bloqueo parcial de E1 & $n_1 \uparrow$ mientras $n_2$ estable o baja. & Reducir $r_1$ (menos flujo a E1), aumentar $u_1$ (drenar E1 más rápido).\\
+Degradación del actuador & $u_1$ al máximo pero $n_1$ no decrece. & Señal de alarma al SCADA; reducción de $r_1$ a mínimo; activar protocolo de mantenimiento.\\
+Pérdida de sensor de $n_i$ & Lectura nula o fuera de rango. & Congelar acción de control del canal afectado; mantener último valor válido; alarma al operador.\\
+\bottomrule
+\end{longtable}
+
+\section{Coordinación, productividad y adaptación}
+
+\subsection*{Reparto difuso del robot}
+
+El reparto $r_1(k)$ se calcula por promedio ponderado de singletons sobre el desequilibrio $b=n_1-n_2$:
+
+\[
+r_1(k) = \operatorname{sat}\!\left(\frac{\mu_{bal} \cdot 0.50 + \mu_{e1h} \cdot 0.30 + \mu_{e2h} \cdot 0.70}{\mu_{bal} + \mu_{e1h} + \mu_{e2h}},\;0.20,\;0.80\right)
+\]
+
+Cuando E1 está más cargada ($b>0.15$), $\mu_{e1h}$ domina y la fracción hacia E1 cae a $0.30$, desviando más flujo a E2. Cuando E2 está más cargada, ocurre lo contrario. La saturación garantiza que ambas esteras reciban siempre al menos el $20\%$ del flujo.
+
+\subsection*{Estimación de productividad en tiempo real}
+
+\[
+P(k) = \sum_{j=0}^{k}\!\left[\eta\,u_1(j)\,\bigl(1-\ell_1(j)\bigr) + \eta\,u_2(j)\,\bigl(1-\ell_2(j)\bigr)\right]
+\]
+
+Si $P(k)$ está por debajo del objetivo programado (por ejemplo, por un atasco prolongado), el supervisor puede relajar la restricción de admisión para recuperar el ritmo de producción tan pronto como la ocupación lo permita.
+
+\subsection*{Q-Learning online}
+
+Con $\varepsilon=0.08$ y $\alpha=0.10$, la tabla Q sigue actualizándose durante el despliegue real. El agente explora ocasionalmente acciones alternativas y aprende de su resultado, adaptándose a la deriva lenta del proceso o al desgaste de actuadores sin necesidad de reentrenamiento offline. Los resultados cuantitativos se discuten en la Sección~\ref{sec:ql_online}.

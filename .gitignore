@@ -1,0 +1,24 @@
+*.aux
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.slx.autosave
+*.asv
+*.m~
+__pycache__/
+*.pyc
+*.pt
+main.pdf
+Grupo_1_Act_08MPRO.pdf
+
+# Excluir de la entrega: herramientas/IDE, backups y notas internas
+.claude/
+legacy_temp/
+*.private

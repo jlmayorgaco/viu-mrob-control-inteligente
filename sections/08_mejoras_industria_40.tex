@@ -1,0 +1,144 @@
+\chapter{4.3.c Mejoras hacia Smart Factory e Industria 4.0}
+\label{ch:i40}
+
+El control diseñado (controlador primario + supervisor) ocupa los niveles~1 y~2 de la pirámide de automatización ISA-95 (IEC~62264) \cite{iec62264isa95}. Las mejoras de esta sección añaden las capas superiores y definen \emph{qué dato concreto} cruza cada interfaz: el nivel~3 (MES/SCADA) lee por OPC~UA las nueve variables de la celda y escribe la consigna de método y los umbrales del supervisor; el nivel~4 (ERP) usa el histórico para fijar la velocidad objetivo de la máquina. Cada propuesta que sigue se apoya en las señales que el supervisor ya registra ($n_i$, $u_i$, $r_1$, $a$, $\ell_i$, $d$) y en el modelo de la ecuación~(\ref{eq:r2et_aware}), no en componentes genéricos \cite{groover2015automation,mccrady2013scada,benitez2022automatizacion}.
+
+\section{Gemelo digital}
+
+Un gemelo digital de la CMF R2ET es una réplica dinámica de la ecuación~(\ref{eq:r2et_aware}) que corre en paralelo al proceso físico, alimentada por los sensores reales de $n_1$, $n_2$ y $d$.
+
+Cuando el operador quiere cambiar los umbrales del supervisor ($N_{risk}$, $N_{alarm}$) o pasar de PID a Fuzzy, el gemelo ejecuta el episodio completo de 160 muestras (la misma simulación de este informe, en pocos milisegundos sobre el PLC) y devuelve el IAE, la ocupación máxima y la energía previstos antes de aplicar el cambio a la línea, eliminando el riesgo de probar sobre producción en curso.
+
+A medida que los activos envejecen, los datos de operación actualizan los parámetros del modelo ($\eta$, $\ell_i$, tiempos de ciclo del robot) para mantener la fidelidad del gemelo. Y cuando se necesitan datos de escenarios extremos (atasco severo en E2, fallo del actuador de E1), el gemelo los genera sin inducir esas condiciones en la línea.
+
+La plataforma de implementación puede ser MATLAB Simulink Real-Time o cualquier simulador de ecuaciones diferenciales conectado al PLC vía OPC~UA con latencia inferior al período de muestreo de $1$~s.
+
+\section{Mantenimiento predictivo}
+
+El supervisor registra $u_i(k)$, $n_i(k)$ y $\ell_i(k)$ en cada ciclo. Esas series temporales contienen tres señales de degradación distintas.
+
+Actuadores. Regla concreta: si $u_i(k)=1.0$ (saturado) durante más de 15~ciclos consecutivos mientras $n_i(k)$ no decrece ($\Delta n_i \geq 0$) y no hay perturbación ($d=0$), el motor o el rodillo han perdido capacidad de empuje. La eficiencia efectiva $\hat{\eta}_i = \text{salida}_i/(\eta\,u_i)$ cae por debajo de 1; su tendencia descendente anticipa la alerta de mantenimiento días antes del fallo.
+
+Superficie de la estera. Si $\ell_i$ crece gradualmente sin cambio en el tipo de pieza, el revestimiento transportador se está desgastando. Un modelo de regresión sobre el histórico de $\ell_i$ predice la vida útil residual (RUL) y agenda la sustitución justo a tiempo.
+
+Calibración del robot. Un desequilibrio sistemático $b(k) \neq 0$ en turnos sin perturbación indica deriva en el patrón de depósito del robot; ese sesgo sostenido es criterio suficiente para programar una recalibración.
+
+\section{Integración OPC UA}
+
+El protocolo OPC~UA (IEC~62541) expone las variables del sistema como nodos accesibles desde cualquier SCADA, MES o ERP de nivel superior sin depender del fabricante del PLC. Los nodos se publican a la cadencia del lazo de control de la celda ($1$~s) mediante una suscripción \emph{monitored item}, bajo el perfil de seguridad \texttt{Basic256Sha256} (cifrado y firma de mensajes). Para la CMF R2ET se propone la siguiente estructura de nodos:
+
+\begin{longtable}{@{}P{0.30\linewidth}P{0.18\linewidth}P{0.40\linewidth}@{}}
+\caption{Nodos OPC UA propuestos para la CMF R2ET.}
+\label{tab:opcua}\\
+\toprule
+Nodo & Tipo & Descripción \\ \midrule \endfirsthead
+\toprule Nodo & Tipo & Descripción \\ \midrule \endhead
+\texttt{R2ET.E1.OcupActual} & Float & Nivel de llenado E1 en tiempo real.\\
+\texttt{R2ET.E2.OcupActual} & Float & Nivel de llenado E2 en tiempo real.\\
+\texttt{R2ET.Control.Velocidad1} & Float & Señal $u_1(k)$.\\
+\texttt{R2ET.Control.Velocidad2} & Float & Señal $u_2(k)$.\\
+\texttt{R2ET.Control.Split} & Float & Reparto del robot $r_1(k)$.\\
+\texttt{R2ET.Alarma.Capacidad} & Bool & Alarma de desbordamiento activa.\\
+\texttt{R2ET.Supervisor.Modo} & Enum & Normal / Riesgo / Alarma.\\
+\texttt{R2ET.Productividad.Total} & Float & Caudal acumulado de salida.\\
+\texttt{R2ET.Energia.Total} & Float & Energía acumulada de actuadores.\\
+\bottomrule
+\end{longtable}
+
+Con esta estructura el MES puede cerrar el bucle de planificación: si la productividad cae por debajo del objetivo, puede aumentar la velocidad objetivo de la máquina de proceso; si la energía supera el presupuesto, puede solicitar al supervisor que cambie al método Q-Learning (más eficiente energéticamente).
+
+\section{SCADA inteligente}
+
+El SCADA de la CMF R2ET se extiende más allá de la visualización de señales. Sus funciones adicionales son:
+
+Dashboard de desempeño en tiempo real. IAE acumulado, productividad, energía y comparativa histórica por turno y por método de control activo.
+
+Cambio de método desde la pantalla. El operador puede seleccionar PID, Fuzzy, DL o QL; antes de confirmar, el SCADA lanza el gemelo (episodio de 160 muestras con el estado actual de las esteras) y muestra el IAE y la ocupación máxima previstos para cada opción, de modo que el cambio se valida sobre datos, no a ciegas.
+
+Alertas proactivas. Notificación por correo o SMS cuando el margen de seguridad cae por debajo de $0.5$~piezas, o cuando se detecta tendencia de degradación en un actuador.
+
+Registro inmutable. Todos los eventos de alarma y cambios de parámetros quedan en base de datos con marca temporal, lo que facilita la auditoría de calidad según ISO~9001.
+
+\section{Analítica de datos industriales}
+
+El supervisor genera en cada ciclo un vector de estado $[n_1, n_2, u_1, u_2, r_1, a, \ell_1, \ell_2, d]$ que, acumulado a lo largo de turnos y semanas, forma un dataset de operación. Tres análisis aportan valor directo a la gestión de la celda:
+
+Perfil de carga por turno. La distribución histórica de $n_{max}(k)$ y el IAE acumulado por turno identifican los turnos con mayor incidencia de atascos, se correlacionan con variables externas (tipo de pieza, temperatura ambiente) y revelan el rango operativo real del sistema frente al diseñado.
+
+Análisis de eficiencia energética. La ratio productividad/energía $\eta_{op}(k)=P(k)/E(k)$ mide la eficiencia operativa del controlador activo. Un descenso sostenido de $\eta_{op}$ sin cambio en la demanda indica degradación de actuadores o desgaste de la estera. El histórico permite establecer la línea base por método de control y cuantificar la mejora del Q-Learning respecto al PID.
+
+Detección de anomalías. Un modelo de regresión o un autoencoder entrenado sobre datos nominales detecta ciclos con comportamiento anómalo ($\ell_i$ fuera del rango histórico, desequilibrio $b$ persistente en turnos sin perturbación) y genera alertas tempranas antes de que el supervisor de capacidad tenga que intervenir.
+
+\section{Aprendizaje automático en producción}
+
+El Q-Learning online de las pruebas (Sección~\ref{sec:ql_online}) es el punto de partida para un agente que actualiza su política durante la operación normal. Los desarrollos inmediatos son:
+
+Reentrenamiento incremental de la red profunda. Los últimos $N$ ciclos de producción se añaden al conjunto de entrenamiento sin olvidar lo aprendido previamente (aprendizaje continuo, \emph{continual learning}). La red se adapta así a la deriva lenta del proceso sin reentrenamiento completo offline.
+
+DQN para sistemas mayores. La tabla Q del aware tiene $9\times9\times2=162$ estados para dos esteras; para tres esteras (R3ET) sería $9^3\times2=1458$, y crece como $9^N\cdot2$ con el número $N$ de esteras. Cuando la tabla deja de ser manejable, un Deep Q-Network la sustituye por una red que aproxima $Q(s,a)$ y generaliza entre estados vecinos, evitando esa explosión.
+
+Transferencia de aprendizaje. El modelo entrenado para la CMF R2ET sirve como punto de partida (\emph{warm start}) para entrenar controladores en celdas similares (por ejemplo, R3ET con tres esteras), lo que acorta el tiempo de puesta en marcha.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[>=Latex, every node/.style={font=\small}]
+  \tikzset{
+    lvl/.style={draw, rounded corners=2mm, fill=UniPrimary!12, draw=UniPrimaryDeep, minimum width=64mm, minimum height=11mm, align=center},
+    arr/.style={<->, line width=0.9pt, color=UniPrimaryDeep, shorten <=1.5pt, shorten >=1.5pt}
+  }
+  \node[lvl] (l4) at (0, 6.0) {Nivel~4: ERP / Planificación\\(Gemelo digital, Analítica, Recomendaciones)};
+  \node[lvl] (l3) at (0, 4.0) {Nivel~3: MES / SCADA inteligente\\(OPC~UA, Dashboard, Mantenimiento predictivo)};
+  \node[lvl] (l2) at (0, 2.0) {Nivel~2: Supervisión\\(Supervisor: ajuste PID, admisión, reparto)};
+  \node[lvl] (l1) at (0, 0.0) {Nivel~1: Control local\\(PID / Fuzzy / Deep Learning / Q-Learning)};
+  \node[lvl] (l0) at (0,-2.0) {Nivel~0: Proceso físico\\(Esteras E1 y E2, Robot R, Máquina)};
+  \foreach \a/\b in {l4/l3, l3/l2, l2/l1, l1/l0} {
+    \draw[arr] (\b.north) -- (\a.south);
+  }
+\end{tikzpicture}
+\caption{Arquitectura jerárquica de la CMF R2ET orientada a Industria~4.0, desde el proceso físico hasta la planificación empresarial, conectados por OPC~UA y aprendizaje continuo.}
+\label{fig:i40_arch}
+\end{figure}
+
+\section{Modelo de referencia RAMI 4.0 y cascarón de administración de activos}
+
+La jerarquía ISA-95 de la Figura~\ref{fig:i40_arch} describe la integración vertical, pero el modelo de referencia de Industria~4.0 (RAMI~4.0, DIN~SPEC~91345) añade dos ejes: el ciclo de vida del activo (de tipo a instancia) y las capas de digitalización (del activo físico a la función de negocio) \cite{din2016rami40}. En ese marco, la celda R2ET se modela como un activo administrado mediante su cascarón de administración de activos (AAS, IEC~63278) \cite{iec63278aas}: un gemelo digital estandarizado que expone, como submodelos interoperables, el modelo dinámico de la ecuación~(\ref{eq:r2et_aware}) con sus parámetros ($\eta$, $\ell_i$, umbrales), los indicadores de operación ($n_i$, productividad, energía, IAE) y la política de control activa (PID, Fuzzy, DL o QL) con su configuración. Frente al acceso por nodos OPC~UA de la Tabla~\ref{tab:opcua}, el AAS aporta una descripción semántica del activo que un sistema de nivel superior interpreta sin conocer el fabricante del PLC, lo que habilita a la celda como componente \emph{plug-and-produce} de una línea reconfigurable.
+
+\section{Eficacia global del equipo (OEE) como indicador de planta}
+
+Los indicadores del Capítulo~\ref{ch:pruebas} son locales al lazo de control. Para la capa de planta, el indicador canónico de Smart Factory es la eficacia global del equipo (OEE), producto de tres factores \cite{nakajima1988tpm}:
+\[
+\text{OEE} = \underbrace{A}_{\text{disponibilidad}} \times \underbrace{P}_{\text{rendimiento}} \times \underbrace{Q}_{\text{calidad}}.
+\]
+La celda R2ET provee los tres factores sin instrumentación adicional: la disponibilidad $A$ como fracción de muestras sin parada por desbordamiento ($n_i\le 3$) ni alarma sostenida; el rendimiento $P$ como cociente entre la productividad medida (caudal de salida acumulado) y la productividad teórica a caudal nominal; y la calidad $Q$ como fracción de piezas procesadas sin violación de capacidad. En el escenario nominal los cuatro métodos logran cero violaciones y cero muestras en alarma, así que $A\approx Q\approx 1$ y el OEE queda determinado por el rendimiento, donde el DL-Aware (productividad $74.93$) encabeza. La mejora que aporta el OEE es convertir las métricas de control en un KPI comparable entre celdas y turnos, que el MES agrega para toda la línea.
+
+\section{Ciberseguridad de tecnología de operación (OT)}
+
+La conexión OPC~UA de la celda con el MES introduce una superficie de ataque que la seguridad funcional no cubre. La norma IEC~62443 estructura la defensa en zonas y conductos \cite{iec62443security}: la celda R2ET y su PLC forman una zona OT segmentada de la red corporativa por un conducto único y monitorizado, con el perfil \texttt{Basic256Sha256} ya citado como cifrado de transporte. Un principio de diseño de este trabajo refuerza esa arquitectura: la capa dura de supervisión de capacidad actúa con independencia del controlador y del MES, de modo que un comando erróneo o malicioso de un nivel superior (por ejemplo, elevar la admisión por encima de lo seguro) no puede provocar un desbordamiento, porque la barrera de capacidad lo recorta localmente. Seguridad funcional y ciberseguridad se refuerzan mutuamente.
+
+\section{Gestión energética (ISO 50001) y respuesta a la demanda}
+
+La energía de actuación ($\sum u_i$) que registra el supervisor es la entrada natural a un sistema de gestión energética conforme a ISO~50001 \cite{iso50001energy}. Con el histórico, el MES fija la línea base de consumo por método y habilita respuesta a la demanda: cuando la tarifa eléctrica entra en periodo punta o se supera el presupuesto energético del turno, el supervisor conmuta al Q-Learning, que en la Fase~2 consume $163.5$ frente a $169.3$ del PID supervisado ($3.4\%$ menos) a cambio de un IAE algo mayor, compromiso aceptable cuando el coste energético prima sobre la precisión de seguimiento. La misma señal alimenta indicadores de sostenibilidad (energía por pieza producida) exigibles en una planta certificada.
+
+\section{Explicabilidad de los controladores aprendidos}
+
+El controlador difuso es transparente por construcción (sus 35~reglas son legibles), pero el DL y el Q-Learning son cajas más opacas, lo que dificulta su aceptación en planta. Una capa de explicabilidad cierra esa brecha sin alterar la política: para el Q-Learning, la tabla $Q$ es directamente inspeccionable, ya que para cada estado de ocupación puede mostrarse la acción elegida y su margen sobre la segunda mejor; para la red profunda, la sensibilidad de la salida $\partial u_i/\partial x_j$ respecto a cada entrada del estado $[e_i,\Delta e_i,\sigma_i,b,d]$ revela qué variable domina cada decisión. Exponer esa traza en el SCADA permite al operador entender por qué un controlador acelera una estera o redirige el robot, requisito práctico para confiar la celda a una política aprendida.
+
+\section{Alineación con estándares}
+
+La Tabla~\ref{tab:estandares} resume el estándar que respalda cada mejora propuesta, lo que sitúa el trabajo en el marco normativo de la automatización industrial y la Industria~4.0.
+
+\begin{longtable}{@{}P{0.34\linewidth}P{0.40\linewidth}P{0.18\linewidth}@{}}
+\caption{Alineación de las mejoras propuestas con estándares de Industria~4.0.}
+\label{tab:estandares}\\
+\toprule
+Mejora & Estándar de referencia & Norma \\ \midrule \endfirsthead
+\toprule Mejora & Estándar & Norma \\ \midrule \endhead
+Interoperabilidad de datos & OPC~UA & IEC~62541 \\
+Integración empresa-control & ISA-95 & IEC~62264 \\
+Gemelo digital / activo administrado & RAMI~4.0, AAS & DIN~SPEC~91345, IEC~63278 \\
+Ciberseguridad OT & Zonas y conductos & IEC~62443 \\
+Gestión energética & Sistema de gestión de la energía & ISO~50001 \\
+KPI de planta (OEE) & Mantenimiento productivo total (TPM) & --- \\
+Trazabilidad y calidad & Sistema de gestión de la calidad & ISO~9001 \\
+\bottomrule
+\end{longtable}

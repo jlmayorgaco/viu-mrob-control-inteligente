@@ -1,0 +1,10 @@
+\chapter{Introducción}
+\label{ch:intro}
+
+El caso asignado al Grupo~1 es la secuencia R2ET: un robot industrial carga dos esteras transportadoras de forma alternada con las piezas que salen de una máquina de proceso, y cada estera admite un máximo de tres piezas simultáneas. El problema de control tiene dos capas: regular el nivel de llenado de cada estera cerca del punto de operación (1.5~piezas), y coordinar el reparto del robot para que ninguna estera quede vacía ni se sature, ni siquiera cuando cambia el peso de las piezas transportadas.
+
+Se comparan cuatro estrategias sobre la misma planta y los mismos escenarios de perturbación: un PID discreto (referencia industrial), un controlador difuso Mamdani (reglas lingüísticas auditables), una red neuronal profunda entrenada por optimización directa de política sobre la planta mediante el método adjunto (sin controlador externo de referencia) y un agente de Q-Learning tabular que aprende la política por interacción con el entorno.
+
+La evaluación tiene dos etapas. La Fase~1 valida cada método como servoregulador sobre la planta de primer orden discreta del Grupo~1 (escalón de referencia y perturbación de carga acotada), para comparar prestaciones servo aisladas de la complejidad del sistema real. La Fase~2 pasa al sistema completo R2ET con dos esteras, robot compartido, pulso de alta demanda y atasco parcial por cambio de peso; aquí se evalúa la capacidad de coordinación supervisora de cada método.
+
+Todas las simulaciones se realizan en tiempo discreto con parámetros fijos y reproducibles. El código fuente completo se incluye en el Apéndice~A.

@@ -1,0 +1,18 @@
+% Tabla de resultados - Act08 R2ET
+\begin{table}[H]
+\centering
+\caption{Variación de cada método inteligente respecto al PID-Aware. Convención: signo positivo = mejor que el PID (menor IAE/desbalance, mayor productividad); negativo = peor. $\Delta$Prod./$\Delta$Energ. en unidades absolutas.}
+\label{tab:aware_improvement}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Método & $\Delta$IAE \% & $\Delta$Prod. & $\Delta$Energ. & $\Delta$Desbal. \% \\
+\midrule
+Fuzzy & -226 & 0 & 0.12 & -9.1 \\
+DL & -94.1 & 0.27 & 0.62 & -173 \\
+QL & -126 & -2.58 & -5.79 & -27.3 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

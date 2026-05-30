@@ -1,0 +1,378 @@
+% =========================================================
+% VIU MROB Activity Style — viu-mrob-activity.sty
+% v2.1: Adds elegant orange accents (TOC links/pages, footer, headrule),
+%       improves TOC styling, section numbering color, and small typographic polish.
+%       Keeps existing structure as requested.
+% =========================================================
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{viu-mrob-activity}[2026/02/23 v2.1 VIU MROB Activity Template]
+
+% ----------- Paquetes base -----------
+\RequirePackage{iftex}
+\ifPDFTeX
+  \input{glyphtounicode}
+  \pdfgentounicode=1
+  \RequirePackage{cmap}
+\fi
+\RequirePackage[spanish,es-noshorthands,shorthands=off]{babel}
+\addto\captionsspanish{\renewcommand{\tablename}{Tabla}}
+\RequirePackage[T1]{fontenc}
+\RequirePackage[utf8]{inputenc}
+\RequirePackage{lmodern}
+\RequirePackage{microtype}
+\RequirePackage{setspace}
+\RequirePackage[a4paper, margin=2.3cm]{geometry}
+\RequirePackage[table,dvipsnames]{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{float}
+\RequirePackage{wrapfig}
+\RequirePackage{hyperref}
+\RequirePackage{fancyhdr}
+\RequirePackage{titlesec}
+\RequirePackage{tcolorbox}
+\RequirePackage{subcaption}
+\RequirePackage{array,tabularx,booktabs,longtable,multirow}
+\tcbuselibrary{breakable,skins}
+\RequirePackage{enumitem}
+\RequirePackage{tikz}
+\RequirePackage{lastpage}
+\RequirePackage{xparse}
+\RequirePackage{amssymb}
+\RequirePackage{etoolbox}
+\RequirePackage{listings}
+
+% --- NEW: TOC styling ---
+\RequirePackage{tocloft}
+
+% ----------- TikZ Libraries (Consolidated) -----------
+\usetikzlibrary{
+    shapes.geometric, arrows.meta, positioning,
+    patterns, shadows.blur, fit, calc, matrix, petri
+}
+
+% ----------- Typography settings -----------
+\onehalfspacing
+\renewcommand{\familydefault}{\sfdefault}
+
+% ----------- Colores -----------
+\definecolor{UniPrimary}{HTML}{E8552D}
+\definecolor{UniPrimaryDeep}{HTML}{C44624}
+\definecolor{UniDark}{HTML}{1A1A1A}
+\definecolor{UniLight}{HTML}{F5F5F7}
+\definecolor{UniMuted}{HTML}{6B7280}
+
+% ----------- Links (elegante + TOC) -----------
+\hypersetup{
+  colorlinks=true,
+  linkcolor=UniPrimary,
+  urlcolor=UniPrimary,
+  citecolor=UniPrimary,
+  filecolor=UniPrimary,
+  linktocpage=true
+}
+
+% ----------- TOC styling (más pro) -----------
+% Líderes y espaciado
+\renewcommand{\cftdotsep}{1.5}
+\setlength{\cftbeforechapskip}{6pt}
+\setlength{\cftbeforesecskip}{2pt}
+
+% Tipos y color (páginas en naranja)
+\renewcommand{\cftchapfont}{\bfseries\color{UniDark}}
+\renewcommand{\cftchappagefont}{\bfseries\color{UniPrimary}}
+\renewcommand{\cftsecfont}{\color{UniDark}}
+\renewcommand{\cftsecpagefont}{\color{UniPrimary}}
+
+% Indentación compacta
+\setlength{\cftchapnumwidth}{2.2em}
+\setlength{\cftsecindent}{2.2em}
+\setlength{\cftsecnumwidth}{3.0em}
+
+% ----------- Default Variables -----------
+\newcommand{\VIUMaster}{Máster Universitario en Robótica y Automatización de procesos (MROB)}
+\newcommand{\VIUSubject}{Automatización de procesos industriales}
+\newcommand{\VIUActivityType}{Actividad 1}
+\newcommand{\VIUActivityTitle}{Diseño de componentes de una celda robotizada}
+\newcommand{\VIUGrupo}{Grupo 1}
+\newcommand{\VIUStudent}{Nombre del Estudiante}
+\newcommand{\VIURole}{Rol del Estudiante}
+\newcommand{\VIUProfessor}{Félix García Padilla}
+\newcommand{\VIULogo}{logo-viu}
+\newcommand{\VIULogoPath}{images/}
+\newcommand{\VIUFileName}{Actividad_NombreApellido.pdf}
+\newcommand{\VIUCoverBgPath}{images/bg-viu}
+\newcommand{\VIUDate}{\today}
+
+% ----------- Setters (Only defined ONCE) -----------
+\newcommand{\SetVIUMaster}[1]{\renewcommand{\VIUMaster}{#1}}
+\newcommand{\SetVIUSubject}[1]{\renewcommand{\VIUSubject}{#1}}
+\newcommand{\SetVIUActivityType}[1]{\renewcommand{\VIUActivityType}{#1}}
+\newcommand{\SetVIUActivityTitle}[1]{\renewcommand{\VIUActivityTitle}{#1}}
+\newcommand{\SetVIUGrupo}[1]{\renewcommand{\VIUGrupo}{#1}}
+\newcommand{\SetVIUStudent}[1]{\renewcommand{\VIUStudent}{#1}}
+\newcommand{\SetVIURole}[1]{\renewcommand{\VIURole}{#1}}
+\newcommand{\SetVIUProfessor}[1]{\renewcommand{\VIUProfessor}{#1}}
+\newcommand{\SetVIULogo}[1]{\renewcommand{\VIULogo}{#1}}
+\newcommand{\SetVIULogoPath}[1]{\renewcommand{\VIULogoPath}{#1}}
+\newcommand{\SetVIUFileName}[1]{\renewcommand{\VIUFileName}{#1}}
+\newcommand{\SetVIUCoverBgPath}[1]{\renewcommand{\VIUCoverBgPath}{#1}}
+\newcommand{\SetVIUDate}[1]{\renewcommand{\VIUDate}{#1}}
+
+% ----------- Contributors Table (Configurable) -----------
+\newcommand{\VIUContributors}{%
+    \textbf{Estudiante(s)}\\[4pt]
+    \begin{tabular}{@{}p{7cm}p{9cm}@{}}
+        \VIUStudent & \VIURole
+    \end{tabular}
+}
+\newcommand{\SetVIUContributors}[1]{\renewcommand{\VIUContributors}{#1}}
+
+% ----------- Header / Footer (más elegante) -----------
+\pagestyle{fancy}
+\fancyhf{}
+
+% Header (discreto)
+\fancyhead[L]{\textbf{MROB–VIU} • \nouppercase{\leftmark}}
+\fancyhead[R]{\textit{\VIUActivityType}}
+
+% Footer con paginación en naranja
+\fancyfoot[C]{\small\color{UniPrimary}\textbf{Página \thepage{} de \pageref{LastPage}}}
+
+% Head rule en naranja sutil
+\renewcommand{\headrulewidth}{0.35pt}
+\renewcommand{\headrule}{%
+  \hbox to\headwidth{%
+    \color{UniPrimary!55}\leaders\hrule height \headrulewidth\hfill
+  }%
+}
+\renewcommand{\footrulewidth}{0pt}
+
+% Plain style (capítulos)
+\fancypagestyle{plain}{%
+    \fancyhf{}
+    \fancyhead[R]{\textit{\VIUActivityType}}
+    \fancyfoot[C]{\small\color{UniPrimary}\textbf{Página \thepage{} de \pageref{LastPage}}}
+    \renewcommand{\headrulewidth}{0.35pt}
+    \renewcommand{\headrule}{%
+      \hbox to\headwidth{%
+        \color{UniPrimary!55}\leaders\hrule height \headrulewidth\hfill
+      }%
+    }
+}
+
+% ----------- Titles (números en naranja, texto oscuro) -----------
+\titleformat{\section}
+  {\bfseries\color{UniDark}\fontsize{16}{18}\selectfont}
+  {\color{UniPrimaryDeep}\thesection}
+  {0.7em}{}
+
+\titleformat{\subsection}
+  {\bfseries\color{UniDark}\fontsize{13}{16}\selectfont}
+  {\color{UniPrimaryDeep}\thesubsection}
+  {0.6em}{}
+
+\titlespacing*{\section}{0pt}{0.9em}{0.5em}
+\titlespacing*{\subsection}{0pt}{0.7em}{0.35em}
+
+% Handle Chapter formatting only if class supports chapters (prevents crash in article class)
+\ifcsdef{chapter}{
+    \titleformat{\chapter}[display]
+    {\raggedright\color{UniDark}}
+    {\makebox[\textwidth]{\hfill{\color{UniPrimaryDeep}\bfseries\fontsize{42}{46}\selectfont \thechapter}}}
+    {0.8ex}
+    {\bfseries\fontsize{22}{26}\selectfont}
+    [\vspace{0.8ex}\color{UniPrimary!55}\titlerule]
+    \titlespacing*{\chapter}{0pt}{2.5ex plus 1ex minus .2ex}{2.0ex}
+    \renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+}{}
+
+% ----------- Boxes & Lists -----------
+\tcbset{colframe=UniPrimary!80!black,colback=white,coltitle=UniPrimary!30!black,boxrule=0.8pt,arc=2mm}
+\setlist[itemize]{left=1.2em}
+\setlist[enumerate]{left=1.6em}
+
+% Custom Requirement Lists
+\newlist{reqop}{enumerate}{1} \setlist[reqop]{label=\textbf{RO-\arabic*},left=1.6em,itemsep=.25em}
+\newlist{reqsup}{enumerate}{1} \setlist[reqsup]{label=\textbf{RS-\arabic*},left=1.6em,itemsep=.25em}
+\newlist{reqger}{enumerate}{1} \setlist[reqger]{label=\textbf{RG-\arabic*},left=1.6em,itemsep=.25em}
+
+% ----------- Tables -----------
+\newenvironment{TablaRequerimientos}{%
+    \renewcommand{\arraystretch}{1.25}%
+    \begin{longtable}{>{\bfseries}p{3.1cm} p{4.2cm} p{4.2cm} p{4.2cm}}
+    \toprule
+    Requerimiento & Parámetros a medir & Parámetros a manipular & Posibles resultados\\
+    \midrule\endhead
+}{\bottomrule\end{longtable}}
+
+\newenvironment{TablaComponentes}{%
+    \renewcommand{\arraystretch}{1.25}%
+    \begin{longtable}{>{\bfseries}p{4cm} p{5.3cm} p{4.1cm} p{4.1cm}}
+    \toprule
+    Componente & Datos técnicos & Ventajas & Desventajas\\
+    \midrule\endhead
+}{\bottomrule\end{longtable}}
+
+\newenvironment{Criterios}[1][Criterios de evaluación y notas]{\begin{tcolorbox}[title={#1}]}{\end{tcolorbox}}
+
+% ----------- Guide Box -----------
+\tcbset{
+    viuGuide/.style={
+        colback=UniLight!70, colframe=UniPrimaryDeep!85!black, coltitle=white,
+        colbacktitle=UniPrimaryDeep!90, coltext=UniDark,
+        fonttitle=\bfseries, fontupper=\itshape, title=Guía de la tarea,
+        sharp corners, enhanced, boxrule=0.6pt, arc=2mm,
+        left=6pt,right=6pt,top=6pt,bottom=6pt,
+        before skip=6pt,after skip=10pt,
+        before upper={\guillemotleft\space}, after upper={\space\guillemotright},
+    }
+}
+\newenvironment{guia}{\begin{tcolorbox}[viuGuide]}{\end{tcolorbox}}
+\NewDocumentCommand{\guidebox}{m}{\par\begin{guia}#1\end{guia}\par}
+\NewDocumentCommand{\guidesection}{s m g}{%
+    \IfBooleanTF{#1}{\guidebox{#2}}{%
+        \phantomsection\addcontentsline{toc}{section}{#2}%
+        \IfNoValueTF{#3}{\guidebox{#2}}{\guidebox{#3}}%
+    }%
+}
+
+% ----------- Listings (estilo sobrio + naranja sutil) -----------
+\lstdefinestyle{viuCode}{
+  basicstyle=\ttfamily\small,
+  numbers=left,
+  numberstyle=\tiny\color{UniMuted},
+  stepnumber=1,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{UniPrimary!55},
+  tabsize=2
+}
+\lstset{style=viuCode}
+
+% ----------- Diagrams (TikZ) -----------
+\newcommand{\ESFlowDiagram}[3][]{%
+    \begin{tikzpicture}[node distance=22mm, >=Latex]
+        \tikzstyle{blk}=[draw,rounded corners=2mm,align=center,inner sep=6pt,minimum width=3.8cm,minimum height=11mm,fill=UniLight]
+        \tikzset{edgeLabel/.style={font=\scriptsize,fill=white,fill opacity=.85,text opacity=1,inner xsep=2pt,rounded corners=1pt,align=center}}
+
+        \node[blk] (sensors) {Sensores\\(Entradas)};
+        \node[blk,right=27mm of sensors,fill=white] (plc) {Control Local\\(PLC/IPC)};
+        \node[blk,right=27mm of plc] (act) {Actuadores\\(Salidas)};
+        \node[blk,above=14mm of plc] (scada) {Supervisión\\SCADA/MES};
+        \node[blk,below=14mm of plc] (erp) {Gestión\\ERP/BI};
+        \node[blk,below right=14mm and 27mm of plc,fill=white] (robot) {Robot R1\\(Controlador dedicado)};
+
+        \draw[->,very thick,UniPrimary!90] (sensors.east) -- (plc.west) node[edgeLabel,above=6pt,midway]{Señales\\analógicas/digitales};
+        \draw[->,very thick,UniPrimary!90] (plc.east) -- (act.west) node[edgeLabel,above=4pt,midway]{Órdenes\\PWM / válvulas};
+        \draw[<->,very thick,UniPrimary!90] (plc.south east) -- (robot.north west) node[edgeLabel,above left=-1pt and 1pt,midway]{Ethernet\\I/O discreta};
+        \draw[<->,very thick,UniMuted] (plc.north) -- (scada.south) node[edgeLabel,right=4pt,midway]{OPC UA / MQTT};
+        \draw[<->,very thick,UniMuted] (erp.north) -- (plc.south) node[edgeLabel,left=4pt,midway]{KPIs / Lotes / Calidad};
+
+        \node[align=left,below=3mm of sensors,text width=4.2cm,font=\footnotesize] {#1};
+        \node[align=left,below=3mm of act,text width=4.2cm,font=\footnotesize] {#3};
+    \end{tikzpicture}%
+}
+
+% --- Robot Box (with Image Check) ---
+\newtcolorbox{robotbox}[2][]{%
+    colback=UniLight!65,colframe=UniPrimaryDeep!80!black,boxrule=0.5pt,
+    sharp corners,arc=1.8mm,
+    title={%
+        \IfFileExists{images/icon-robot.png}{%
+            \includegraphics[height=1em]{images/icon-robot.png}\hspace{0.4em}%
+        }{%
+            \textbf{[R]}\hspace{0.4em}%
+        }%
+        \textbf{#2}%
+    },
+    fonttitle=\bfseries\color{white},colbacktitle=UniPrimary!90,coltitle=white,
+    enhanced,before skip=6pt,after skip=8pt,left=6pt,right=6pt,top=4pt,bottom=4pt,
+    #1
+}
+
+% ----------- Cover Page -----------
+\newcommand{\MakeVIUActivityTitle}{%
+\newgeometry{left=1.8cm,right=1.8cm,top=1.8cm,bottom=2.2cm}
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+    \thispagestyle{empty}
+    \pagecolor{UniPrimaryDeep}
+    \color{white}
+
+    % Decorative background only; content uses normal page flow.
+    \begin{tikzpicture}[remember picture,overlay]
+        \IfFileExists{\VIUCoverBgPath.png}{%
+            \node[anchor=south east,opacity=0.15] at ($(current page.south east)+(+1.0cm,-1.3cm)$)
+            {\includegraphics[height=18.2cm]{\VIUCoverBgPath}};
+        }{}%
+    \end{tikzpicture}
+
+    \raggedright
+
+    % Logo (Optional)
+    \IfFileExists{\VIULogoPath\VIULogo.pdf}{%
+        \includegraphics[height=1.7cm]{\VIULogoPath\VIULogo}%
+    }{%
+        \IfFileExists{\VIULogoPath\VIULogo.png}{%
+            \includegraphics[height=1.7cm]{\VIULogoPath\VIULogo}%
+        }{}%
+    }
+
+    \vspace*{2.1cm}
+
+    {\bfseries\fontsize{14}{16}\selectfont \VIUMaster\par}
+    \vspace{3pt}
+    {\fontsize{22}{24}\selectfont \VIUSubject\par}
+
+    \vspace*{2.8cm}
+
+    {\bfseries\fontsize{34}{40}\selectfont \VIUActivityType\par}
+    \vspace{4pt}
+    {\color{UniLight}\bfseries\fontsize{16}{20}\selectfont \VIUActivityTitle\par}
+    \vspace{8pt}
+    {\fontsize{14}{16}\selectfont \VIUGrupo\par}
+
+    \vfill
+
+    {\color{UniLight}\rule{\textwidth}{0.9pt}\par}
+    \vspace{1.0cm}
+
+    \begin{minipage}[t]{0.64\textwidth}
+        \raggedright
+        {\fontsize{11}{14}\selectfont
+        \VIUContributors\par
+        \vspace{6pt}
+        \textbf{Profesor}\quad \VIUProfessor\par
+        \vspace{2pt}
+        \textbf{Fecha}\quad \VIUDate\par}
+    \end{minipage}
+\end{titlepage}
+\restoregeometry
+\pagecolor{white}
+\color{UniDark}
+\setcounter{page}{2}
+\hypersetup{pageanchor=true}
+}
+
+% ----------- Tag de autor / responsable de sección -----------
+% Estilo visual del "label" tipo tag — INVISIBLE (blanco sobre blanco)
+\tikzset{
+  viuTagLabel/.style={
+    rounded corners=1.6pt,
+    fill=white,
+    text=white,
+    draw=white,
+    inner xsep=4pt,
+    inner ysep=1.2pt,
+    font=\scriptsize\bfseries
+  }
+}
+
+% Comando robusto para usar en texto, al inicio de sección, etc.
+\DeclareRobustCommand{\bymember}[1]{%
+  \tikz[baseline=(tag.base)]{
+    \node[viuTagLabel] (tag) {#1};
+  }%
+}

@@ -1,0 +1,56 @@
+seed: 8
+
+servo:
+  Ts: 0.1
+  T_final: 80.0
+  reference_step_time: 2.0
+  reference_value: 1.0
+  disturbance_start: 40.0
+  disturbance_end: 55.0
+  disturbance_magnitude: -0.18
+  u_min: 0.0
+  u_max: 1.0
+  du_max: 0.08
+  plant:
+    numerator: [0.174, 0.3744]
+    denominator: [1.0, 0.785, 0.3744]
+
+coordination:
+  Ts: 1.0
+  horizon: 180
+  N_max: 3.0
+  n_target: 1.5
+  risk_threshold: 2.7
+  arrival_nominal: 0.46
+  arrival_pulse: 0.72
+  pulse_start: 55
+  pulse_end: 85
+  jam_start: 105
+  jam_end: 130
+  jam_loss: 0.35
+  u_min: 0.05
+  u_max: 1.0
+  admission_min: 0.45
+  admission_max: 1.0
+  split_min: 0.15
+  split_max: 0.85
+  k_discharge: 0.48
+
+training:
+  deep_servo_samples: 12000
+  deep_coord_samples: 20000
+  train_split: 0.70
+  val_split: 0.15
+  test_split: 0.15
+  deep_epochs: 300
+  batch_size: 256
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  q_servo_episodes: 2500
+  q_coord_episodes: 3500
+  q_gamma: 0.95
+  q_alpha: 0.12
+  q_epsilon_start: 0.45
+  q_epsilon_end: 0.03
+  q_servo_horizon: 120
+  q_coord_horizon: 180

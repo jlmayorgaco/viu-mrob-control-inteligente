@@ -1,0 +1,4 @@
+# Dependencias reales de src/python/v2_simulate.py (NumPy puro, sin frameworks de ML).
+numpy>=1.24
+pandas>=2.0
+matplotlib>=3.7

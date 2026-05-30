@@ -1,0 +1,481 @@
+                    Actividad 08 MROB
+      Control Inteligente y Aprendizaje Automático
+ Diseño de configuración de sistema inteligente avanzado integrado
+  Pruebas y propuesta de Supervisión Avanzada integrada en una
+                   Celda de Manufactura Flexible
+
+1. Objetivo principal de la actividad
+Desarrollar las competencias necesarias para el análisis, diseño, configuración y evaluación de
+sistemas inteligentes avanzados aplicados a una Celda de Manufactura Flexible (CMF),
+integrando estrategias de control inteligente, supervisión avanzada y toma de decisiones
+automatizada.
+
+La actividad busca fortalecer la capacidad de diseñar soluciones orientadas a entornos
+industriales modernos basados en los principios de Industria 4.0 y Smart Manufacturing,
+considerando aspectos de automatización, seguridad, eficiencia operativa, robustez,
+sostenibilidad y adaptabilidad frente a perturbaciones y fallos.
+
+
+2. Contextualización y material de apoyo
+Para el desarrollo de esta actividad, deberán apoyarse en los contenidos teóricos y prácticos
+estudiados durante las sesiones iniciales de la asignatura, especialmente aquellos relacionados
+con:
+
+        • Sistemas de control inteligente aplicados a procesos industriales.
+        • Lógica difusa y redes neuronales.
+        • Sistemas de supervisión y toma de decisiones.
+        • Modelado y simulación en MATLAB/Simulink.
+        • Automatización de celdas de manufactura flexible.
+        • Integración de sistemas de control local y supervisorio.
+
+Desde el punto de vista práctico, se espera el análisis de la dinámica del proceso industrial
+asignado y se propongan estrategias de control inteligente capaces de mejorar el desempeño
+global del sistema, integrando funciones de supervisión, adaptación y optimización operativa.
+
+
+
+
+                          Universidad Internacional de Valencia (VIU)
+3. Indicaciones generales de ejecución
+La actividad podrá desarrollarse de forma individual o grupal, utilizando como referencia la
+Celda de Manufactura Flexible asignada.
+
+Se deberá diseñar una propuesta de control inteligente y supervisión avanzada considerando:
+
+        • Control digital inteligente de un lazo local.
+        • Supervisión inteligente para ajuste dinámico del controlador (o controladores).
+        • Estrategias de monitoreo y diagnóstico.
+        • Integración de algoritmos inteligentes para apoyo a la toma de decisiones.
+
+La entrega final deberá presentarse en formato PDF e incluir capturas de pantalla de
+simulaciones, diagramas de bloques, tablas de resultados, análisis técnicos y conclusiones
+fundamentadas.
+
+Se recomienda utilizar MATLAB/Simulink como plataforma principal para la simulación y
+validación de las propuestas desarrolladas.
+
+
+4. Actividades a desarrollar
+4.1. Análisis de requisitos y especificaciones del sistema (Subtotal=3 puntos)
+
+    a) Identificar los requisitos funcionales y no funcionales del sistema inteligente avanzado
+       para la CMF. (1,5 puntos)
+
+        Considerar aspectos como:
+
+                • Precisión y estabilidad del control.
+                • Adaptabilidad ante perturbaciones.
+                • Robustez y fiabilidad.
+                • Seguridad operativa.
+                • Escalabilidad y mantenibilidad.
+                • Interacción usuario-sistema.
+                • Integración con sistemas industriales existentes.
+
+    b) Definir las especificaciones técnicas necesarias para el diseño del sistema de control y
+       supervisión inteligente. (1,5 puntos)
+
+        Se deben incluir:
+
+                • Variables de proceso.
+                • Parámetros operativos.
+                • Restricciones técnicas.
+
+
+
+                            Universidad Internacional de Valencia (VIU)
+                • Variables de monitoreo.
+                • Objetivos de desempeño.
+
+4.2. Diseño del sistema de control inteligente (Subtotal = 5 puntos)
+
+        a. Seleccionar y justificar la estrategia de control inteligente más adecuada para el
+           proceso asignado. (0,5 puntos)
+
+        Se podrá utilizar:
+               •    Lógica difusa.
+               •    Redes neuronales.
+               • Sistemas híbridos con base en control inteligente que pueden
+                    incluir Estrategias adaptativas.
+
+    b) Definir las variables de entrada y salida del controlador inteligente. (0,5 puntos)
+
+        Se deberán incluir:
+
+                • Variables lingüísticas.
+                • Universos de discurso.
+                • Funciones de membresía.
+                • Señales de retroalimentación.
+
+    c) Diseñar sobre MatLab/Simulink la arquitectura de control digital directo inteligente (2,0
+       ptos)
+
+        El informe debe contener:
+
+                •    Diagrama de bloques.
+                •    Explicación funcional de cada bloque.
+                •    Base de conocimiento.
+                •    Estrategia de fuzzificación.
+                •    Reglas de inferencia.
+                •    Estrategia de defuzzificación.
+
+    d) Diseñar sobre Matlab/Simulink el sistema supervisor inteligente para optimizar un
+       control PID local (2,0 ptos)
+
+        Se deberá:
+
+                • Definir variables de supervisión.
+                • Incorporar criterios de ajuste automático.
+                • Analizar perturbaciones y fallos.
+                • Proponer mecanismos de optimización y adaptación.
+
+
+
+
+                           Universidad Internacional de Valencia (VIU)
+4.3. Supervisión avanzada integrada hacia Smart-Factory e Industria 4.0 y pruebas de
+desempeño (Subtotal = 2,0 puntos)
+
+   a) Definir los indicadores de desempeño del sistema. (0,5 puntos)
+
+       Ejemplos:
+
+               • Error de seguimiento.
+               • Tiempo de establecimiento.
+               • Consumo energético.
+               • Productividad.
+               • Calidad del proceso.
+               • Tolerancia a fallos.
+
+   b) Realizar pruebas de simulación y análisis de resultados. (1,0 puntos)
+
+       Se deberá:
+
+               • Evaluar el comportamiento del sistema ante perturbaciones.
+               • Comparar el desempeño antes y después de aplicar control inteligente.
+               • Analizar la necesidad de supervisión avanzada.
+               • Justificar técnicamente los resultados obtenidos.
+
+   c) Proponer posibles mejoras futuras orientadas a Industria 4.0. (0,5 puntos)
+
+       Considerar:
+
+               • Gemelos digitales.
+               • Mantenimiento predictivo.
+               • Integración OPC UA.
+               • SCADA inteligente.
+               • Analítica de datos industriales.
+               • Aprendizaje automático en tiempo real.
+
+
+5. Resultados esperados
+Se deberá presentar un informe técnico estructurado que evidencie:
+
+       • Comprensión del problema industrial planteado.
+       • Correcta formulación del sistema de control inteligente.
+       • Diseño coherente de la supervisión avanzada.
+       • Uso adecuado de herramientas de simulación.
+
+
+
+                          Universidad Internacional de Valencia (VIU)
+        • Interpretación técnica de resultados.
+        • Capacidad crítica para proponer mejoras y optimizaciones.
+
+
+
+El trabajo debe demostrar dominio conceptual y capacidad de integración entre control
+inteligente, automatización industrial y supervisión avanzada.
+
+
+6. Entrega
+La actividad deberá entregarse a través del campus virtual en formato PDF (Archivo de nombre
+Grupo_Numero_Act_08MPRO.pdf).
+
+Deberá incluir:
+
+        •   Portada.
+        •   Índice.
+        •   Desarrollo técnico.
+        •   Diagramas y simulaciones.
+        •   Resultados obtenidos.
+        •   Conclusiones.
+        •   Programas elaborados
+
+Se valorará positivamente la inclusión de un video explicativo breve (máximo 5 minutos) donde
+se describa la propuesta desarrollada, las simulaciones realizadas y las conclusiones principales
+del trabajo.
+
+
+7. Bibliografía
+
+
+Timothy J. Ross (2010), Fuzzy Logic with Engineering Applications, Third Edition, John Wiley &
+Sons.
+
+GROOVER, M. P. (2015), Automation, Production Systems and Computer-Integrated
+Manufacturing.
+
+Nikola K. Kasabov (1996), Foundations of Neural Networks, Fuzzy Systems and Knowledge
+Engineering.
+
+Martin J. y Rodellar J., Control Adaptativo Experto, UNED.
+
+Stuart G. McCrady (2013), Designing SCADA Application Software.
+
+
+
+
+                           Universidad Internacional de Valencia (VIU)
+Óscar Reinoso García et al. (2022), Ejemplos Prácticos de Redes Neuronales mediante MATLAB y
+PYTHON.
+
+Benítez I. et al. (2022), Diseño de Sistemas de Automatización Integrada.
+
+                                                    ANEXO
+
+
+
+    Casos particulares de cada equipo de trabajo del portafolio de actividades de la asignatura
+
+
+Simbología de elementos de los Sistemas de Fabricación Flexible presentados:
+
+    1.   Máquina de operación de fabricación general (CNC, mecanizado, soldadura, taladrado, etc.)
+
+
+
+
+    2. Robot o manipulador industrial
+
+
+
+
+    3. Almacenamiento temporal (Buffer de tres posiciones)
+
+
+
+
+    4. Cinta o estera transportadora
+
+
+
+
+    5. Vehículo auto-guiado (VAG)
+
+
+
+
+    6. Mesa giratoria o rotatoria
+
+
+
+
+    7. Elemento de prueba de calidad o terminado (Verificador, Testador o Tester) (incluye empujador
+       para piezas defectuosas)
+
+
+
+
+                               Universidad Internacional de Valencia (VIU)
+   Equipo1: Secuencia de un Robot, dos esteras transportadoras (R2ET): Un robot realiza la carga
+   de dos esteras de transporte de productos de salida de una máquina de forma alternada. De
+   acuerdo con la longitud de la estera considere que sólo pueden permanecer tres piezas al
+   mismo tiempo encima de la estera
+
+
+
+
+Equipo2: Secuencia de un Robot, una mesa rotatoria y una máquina (RMrM): Un robot realiza la
+carga de una mesa rotatoria con giros de 180º para una operación de soldadura a arco. Los
+materiales de entrada permanecen en un almacén (buffer) de entrada de 3 posiciones. Las
+piezas terminadas son colocadas por el mismo robot en otro buffer de salida de 3 posiciones. La
+operación de descarga de la mesa rotatoria es prioritaria a la carga.
+
+
+
+
+   Equipo3: Secuencia de un Robot, una máquina y un verificador o tester (RMT): Evitar el
+   “desbordamiento” de los almacenes temporales. La pieza tiene que ser colocada por el robot
+   en B1, luego operada por M1, luego espera en B2 para la prueba, y al final se queda en B3.
+   Hay sensores iniciales en los búffers. Solo es controlable el inicio de operación en M1 y T
+
+
+
+
+                          Universidad Internacional de Valencia (VIU)
+Equipo4: Secuencia EMTR (cinta transportadora, máquina, verificador de prueba (tester) y
+robot): El movimiento de piezas en el transportador es solo a la derecha. Las piezas se pueden
+operar y probar en el transportador en movimiento siempre que la velocidad sea inferior a
+Velmax. La operación del robot debe evitar el "desbordamiento" en el almacén B1. Hay
+sensores iniciales en M1 y T1, solo se pueden controlar sus inicios de operación.
+
+
+
+
+Equipo5: Secuencia REMT: (Robot, cinta transportadora, Máquina, verificador de Prueba): El
+funcionamiento del robot que alimenta piezas en la cinta debe estar sincronizado con la
+velocidad de la cinta. Las piezas se pueden operar y probar en movimiento si la velocidad no
+es superior a Velmax. Ambos tienen sensores de presencia de piezas. Si el almacén de salida
+está lleno, la operación del sistema se bloquea
+
+
+
+
+Equipo6: Secuencia de robot, mesa giratoria, máquinas y prueba (RMRMMT): El robot se
+comparte para cargar y descargar la mesa giratoria. Las operaciones a ejecutar en M1, M2 y
+T deben tener la pieza estática; por tanto las rotaciones de MR son solo de 90 grados. Evitar
+el “desbordamiento” de la salida B (Bs). Solo hay un sensor parcial en P1, el inicio de
+operaciones es controlable y M1 tiene el tiempo de operación más largo (tM1).
+
+
+
+
+                      Universidad Internacional de Valencia (VIU)
+Equipo7: Secuencias paralelas de dos máquinas con carga robótica y salida a verificador de
+prueba (R-2MT): El robot se comparte para la carga en las máquinas M1 y M2 con prioridad
+de M1. Las piezas se operan y luego se prueban para ser almacenadas en los búferes de salida.
+La velocidad de funcionamiento de M2 es la mitad de la velocidad de M1. Las pruebas son
+instantáneas
+
+
+
+
+Equipo8: Secuencia serial de dos Máquinas y sus respectivos verificadores de Prueba
+compartiendo un Robot (RMTMTR): El robot recoge las piezas en Be y las lleva a M1, luego,
+cuando termina, lo lleva a T1. Luego de ser probadas en T1, carga M2 y al terminar transporta
+la pieza a T2, al terminar en T2 se almacena en Bs. Hay información sobre el número de piezas
+en los buffers, y el inicio y final de cada operación.
+
+
+
+
+                      Universidad Internacional de Valencia (VIU)
+Equipo9: Secuencia R-2M-T: Un robot se encuentra en el centro de una CMF para cargar y
+descargar dos máquinas M1 y M2 de funcionamiento paralelo entre los almacenes de entrada
+y salida Be y Bi. Posteriormente, la pieza es probada y colocada en el almacén de Bs. La
+máquina M1 tiene prioridad en el uso del robot. El comienzo y el final de todas las operaciones
+son conocidos y solo se puede controlar el comienzo
+
+
+
+
+Equipo10: Iteración de actividades en una Máquina y una Prueba RMT: En el centro de un
+CMF se encuentra un robot que taladra tres caras de una pieza en un mismo taladro, luego el
+robot toma una pieza en bruto de Be y la coloca en el taladro con una de las caras a taladrar
+hacia arriba, luego de taladrar toma y vuelve a otra cara y la vuelve a poner dos veces más
+para completar la perforación en las tres caras. Después de los tres agujeros, la pieza se coloca
+para probar en tres posiciones también por el mismo robot, y si está lista, entonces se coloca
+en el Bs. Las caras por taladrar son consecutivas, lo que significa que el robot sólo coge la
+pieza por arriba y la vuelve a apartar.
+
+
+
+
+                       Universidad Internacional de Valencia (VIU)
+Equipo11: Secuencias paralelas de dos Máquinas con sus respectivos verificadores de Prueba
+compartiendo un robot (R-2MT-R): El robot se comparte entre dos líneas de producción
+compuestas por una máquina Mi y un Tester Ti. El robot carga y descarga las máquinas y el
+Tester. Ambas líneas comparten buffers de entrada Be y salida Bs. Se conocen el inicio y el
+final de cada operación y el número de partes en el búfer.
+
+
+
+
+Equipo12: Secuencia paralela de dos cintas transportadoras donde se mecanizan y prueban
+las piezas cargadas por un robot (R-2MT): Un robot carga piezas desde un búfer de entrada
+hasta el comienzo de dos cintas transportadoras que realizan dos operaciones diferentes pero
+paralelas a partir de la misma pieza sin procesar. Las operaciones en M1, M2, T1 y T2 se
+realizan con la cinta transportadora moviéndose a velocidades Ve1 y Ve2 (Ve1=2Ve2) y tienen
+sensores en todas las posiciones. El transportador 1 tiene prioridad para cargarse.
+
+
+
+
+                      Universidad Internacional de Valencia (VIU)
+Equipo13: Secuencia de dos mesas giratorias (MR) para alimentar dos máquinas de soldar
+(MS) las cuales son cargadas por un robot (R-2MR): Un robot se ocupa de cargar dos maquinas
+de soldar por 32 puntos en cada pieza, las cuales son colocadas por el robot sobre una mesa
+giratoria que mueve 180 grados la pieza a soldar, y al mismo tiempo retira la pieza terminada
+para ser descargada por el robot. Hay sensores de piezas en las posiciones P1 y P2 de la mesa
+giratoria. Las velocidades de operación de ambas máquinas son las mismas, pero más lentas
+que la carga y descarga de la pieza por parte del robot. M1 tiene prioridad en el uso del robot
+
+
+
+
+Equipo14: Secuencias paralelas de dos Máquinas alimentando una tercera que descarga un
+robot (2M-MR): Dos máquinas M1 y M2 de producción paralela descargan en buffers unitarios
+(Bu 1 y 2) para ingresar a la máquina M3 que ensambla ambas piezas y las coloca en el Bs para
+la paletización de los productos por un robot. Sincroniza las máquinas si la Velocidad de M2
+es 2/3 de la velocidad de M1. Evitar desbordamientos de búfer.
+
+
+
+
+                       Universidad Internacional de Valencia (VIU)
+Equipo15: Secuencia de máquinas compartidas para dos productos diferentes (2B-R2MR-
+2B): La línea de producción de las máquinas M1 y M2 es compartida para el mecanizado de
+dos tipos diferentes de piezas que son cargadas alternativamente por el robot R1 desde los
+almacenes de entrada Be1 y Be2. Al final son descargados por R2 a sus respectivos
+almacenes de salida Bs1 y Bs2. Se conoce el número de partes en todos los buffers, así como
+el inicio y final de cada operación, pero solo se pueden controlar los inicios. Evitar
+“desbordamientos” y errores en la colocación de las piezas en sus respectivos buffers y en el
+funcionamiento de la máquina.
+
+
+
+
+Equipo16: Secuencia de Máquina, VAG, Verificador de Prueba y Máquina (MVAGTM): El VAG
+carga piezas terminadas en M1; realiza una prueba con la pieza en el VAG y luego la carga en
+el M2. Para la prueba, la pieza puede estar en el VAG, pero tiene que permanecer n segundos
+inmóvil en la posición de prueba, para lo cual tiene un sensor de posición del VAG en esa
+posición. Evite el "desbordamiento" de B2
+
+
+
+
+Equipo17: Secuencia serie de VAG que transporta piezas entre cuatro máquinas (VAG-4M): El
+VAG toma las piezas en bruto del Be y coloca las piezas terminadas en el Bs, además, carga y
+descarga las máquinas Mi. El funcionamiento de las máquinas es 10 veces más lento que las
+operaciones de carga, descarga y manipulación del VAG. Hay información sobre el inicio y el
+final de las operaciones, pero solo los inicios de las operaciones son controlables. Es una
+secuencia en producción en serie donde la pieza viaja M1-M2-M3-M4.
+
+
+
+
+                      Universidad Internacional de Valencia (VIU)
+Equipo18: Secuencia paralela de un VAG transportando piezas en dos líneas de Máquinas
+(VAG-2LM): El VAG toma las piezas en bruto del Be y coloca las piezas terminadas en el Bs,
+además, carga y descarga las máquinas Mi. El funcionamiento de la máquina es 10 veces
+más lento que las operaciones de carga, descarga y manipulación de VAG. Hay información
+sobre el inicio y el final de las operaciones, pero solo los inicios de las operaciones son
+controlables. La secuencia de trabajo es simultánea para dos piezas en las líneas paralelas
+(M1-M3 o M2-M4).
+
+
+
+
+Equipo19: Secuencia paralela de dos VAG transportando piezas en dos líneas de Máquinas
+(2VAG-2M): Una celda de manufactura flexible CMF tiene dos líneas de producción paralelas
+con sus respectivos VAG que toman las piezas del mismo almacén de entrada (Be), cargan la
+primera máquina (M1 y M3 respectivamente) y luego descargan para cargar en la segunda
+máquina (M2 y M4 respectivamente). Cuando finaliza la operación, descargan y colocan las
+piezas terminadas en el mismo búfer de salida. Evita colisiones de VAG al acceder a Be y Bs.
+Prioridad para VAG1.
+
+
+
+
+                      Universidad Internacional de Valencia (VIU)
+Equipo20: Secuencia paralela de dos VAG transportando piezas entre 2 máquinas y un único
+punto de Prueba (2M2VAG-T): Dos máquinas son descargadas por dos VAG que comparten la
+misma vía frente a un único punto de Prueba, para su posterior descarga en los respectivos
+buffers de salida. Hay un sensor de presencia de VAG frente al punto de prueba, que puede
+probar la pieza en el VAG en movimiento a una velocidad inferior.
+
+
+
+
+                     Universidad Internacional de Valencia (VIU)
+

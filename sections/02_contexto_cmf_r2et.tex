@@ -1,0 +1,137 @@
+\chapter{Contexto de la CMF R2ET: Grupo~1}
+\label{ch:contexto}
+
+\section{Descripción del sistema}
+
+La celda del Grupo~1 contiene una máquina de proceso, un robot de transferencia y dos esteras transportadoras de salida E1 y~E2. El robot retira las piezas terminadas de la máquina y las deposita, de forma alternada, en una de las dos esteras. Cada estera tiene longitud para alojar un máximo de tres piezas simultáneas; si se supera ese límite, la producción se bloquea \cite{groover2015automation,benitez2022automatizacion}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[>=Latex, every node/.style={font=\small}]
+  \tikzset{
+    mach/.style={draw, fill=UniLight, rounded corners=2mm, minimum width=22mm, minimum height=14mm, align=center},
+    robot/.style={draw, fill=UniPrimary!15, rounded corners=3mm, minimum width=18mm, minimum height=18mm, align=center, draw=UniPrimaryDeep, line width=1pt},
+    belt/.style={draw, fill=UniLight!60, rounded corners=1mm, minimum width=40mm, minimum height=12mm, align=center},
+    arr/.style={->, line width=1.0pt, color=UniPrimaryDeep},
+    lbl/.style={font=\scriptsize, fill=white, inner sep=1pt},
+  }
+  \node[mach]  (M)  at (0, 0)    {Máquina\\proceso};
+  \node[robot] (R)  at (3.5, 0)  {Robot\\R};
+  \node[belt]  (E1) at (7.5, 1.2){Estera E1\\(cap.~3 piezas)};
+  \node[belt]  (E2) at (7.5,-1.2){Estera E2\\(cap.~3 piezas)};
+  \draw[arr] (M.east) -- node[lbl,above]{pieza} (R.west);
+  \draw[arr] (R.east) -- node[lbl,above,sloped]{alt.} (E1.west);
+  \draw[arr] (R.east) -- node[lbl,below,sloped]{alt.} (E2.west);
+  \draw[arr] (E1.east) -- ++(1.0,0) node[right]{\scriptsize salida};
+  \draw[arr] (E2.east) -- ++(1.0,0) node[right]{\scriptsize salida};
+\end{tikzpicture}
+\caption{Esquema de la CMF R2ET: robot que alimenta dos esteras de salida de forma alternada.}
+\label{fig:cmf_r2et}
+\end{figure}
+
+\section{Problema de control}
+
+La dificultad no está en hacer que el robot alterne, sino en decidir \emph{cuánto} alimentar a cada estera y \emph{a qué velocidad} descargarlas. Tres situaciones lo complican:
+
+Saturación. Si el robot sigue depositando piezas en una estera ya casi llena, el margen se agota en pocas muestras. El control debe anticipar la saturación y redirigir el flujo.
+
+Vaciado. Si la velocidad de descarga es demasiado alta respecto al flujo de entrada, la estera queda vacía y la línea de salida se interrumpe. El nivel objetivo de~1.5~piezas ($50\%$ de la capacidad) centra la operación dejando margen de seguridad en ambos sentidos (frente a saturación y frente a vaciado).
+
+Cambio de peso. Piezas más pesadas se mueven con más fricción sobre la estera: la eficiencia de descarga cae hasta un $35\%$ en E1 y un $17.5\%$ en E2 durante el episodio de perturbación. El controlador debe detectar esta caída y compensarla (acelerando la estera, reduciendo la admisión de nuevas piezas o redirigiendo el robot hacia E2) sin esperar a que la estera llegue al umbral de alarma.
+
+\section{Modelo dinámico}
+
+\subsection*{Planta continua: función de transferencia (Guía VIU)}
+
+La función de transferencia continua asignada al Grupo~1 (R2ET) en la guía de la actividad es:
+
+\begin{equation}
+G_p(s) = \frac{0.174\,s + 0.3744}{s^2 + 0.785\,s + 0.3744}
+\label{eq:planta_continua}
+\end{equation}
+
+Esta es una planta de segundo orden con un cero real. Sus características principales se obtienen directamente de los coeficientes:
+
+\begin{itemize}
+  \item Frecuencia natural no amortiguada: $\omega_n = \sqrt{0.3744} = 0.612$~rad/s
+  \item Factor de amortiguamiento: $\zeta = \dfrac{0.785}{2\,\omega_n} = \dfrac{0.785}{1.224} = 0.641$ \quad (subamortiguado bien amortiguado)
+  \item Polos complejos conjugados:
+        \[s_{1,2} = -\zeta\omega_n \pm j\,\omega_n\sqrt{1-\zeta^2}
+                  = -0.393 \pm j\,0.470 \;\text{rad/s}\]
+  \item Cero real: $s_z = -0.3744/0.174 = -2.15$~rad/s \quad ($5.5\times$ más rápido que los polos dominantes)
+  \item Ganancia estática: $G_p(0) = 0.3744/0.3744 = 1.0$ (ganancia unitaria en DC)
+\end{itemize}
+
+\subsection*{Reducción al modelo de primer orden para el lazo servo (Fase~1)}
+
+Para el lazo local de seguimiento (Fase~1) se aproxima $G_p(s)$ por su constante de tiempo dominante, \emph{conservando la ganancia DC unitaria} de la planta asignada. La aproximación es válida porque:
+\begin{enumerate}
+  \item El cero ($s_z=-2.15$) está $5.5\times$ más alejado del origen que los polos dominantes; su influencia sobre la respuesta lenta es secundaria.
+  \item Los polos complejos están bien amortiguados ($\zeta=0.641$): la respuesta es solo levemente oscilatoria y queda bien capturada por la constante de tiempo dominante $\tau_d = 1/|\operatorname{Re}(s_{1,2})| = 1/0.393 \approx 2.55$~s.
+\end{enumerate}
+
+El modelo reducido continuo, que preserva la ganancia estática de $G_p(s)$, es:
+\begin{equation}
+G_1(s) = \frac{K_f}{\tau_d\,s + 1}, \qquad K_f = G_p(0) = 1.0,\quad \tau_d = 2.55~\text{s}
+\label{eq:planta_reducida}
+\end{equation}
+
+La perturbación de carga (cambio de peso, que reduce la eficiencia de descarga) se modela como un término aditivo $-K_d\,d(t)$ sobre la dinámica.
+
+\subsection*{Discretización ZOH: planta servo (Fase~1)}
+
+El período de muestreo de la planta servo se fija por el criterio de doce muestras por constante de tiempo dominante: $T_s = \tau_d/12 = 0.2125$~s. Conviene distinguir dos escalas temporales: este $T_s$ es el de la dinámica servo local de la Fase~1, mientras que la coordinación de la celda R2ET (Fase~2) y las capas de Industria~4.0 operan a un ciclo nominal mayor, de $1$~s. La discretización por retenedor de orden cero (ZOH) de un primer orden da el polo discreto $a = e^{-T_s/\tau_d}$, con $b = K_f(1-a)$ y $b_d = K_d(1-a)$:
+
+\begin{equation}
+\boxed{y(k+1) = \underbrace{0.92}_a\,y(k) + \underbrace{0.08}_b\,u(k) - \underbrace{0.024}_{b_d}\,d(k)}
+\label{eq:planta_servo}
+\end{equation}
+
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Parámetro & Valor & Origen \\ \midrule
+$a = e^{-T_s/\tau_d}$ & $0.92$ & polo discreto ($T_s/\tau_d = 1/12$, $e^{-1/12}=0.920$) \\
+$b = K_f(1-a)$ & $0.08$ & ganancia de control ($K_f = G_p(0) = 1.0$) \\
+$b_d = K_d(1-a)$ & $0.024$ & sensibilidad a perturbación ($K_d = 0.30$) \\
+$u_{ff} = r\,(1-a)/b$ & $0.60$ & feedforward para $r=0.6$ (ganancia DC unitaria $\Rightarrow u_{ss}=r$) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Como la ganancia DC es unitaria, el régimen estacionario exige $u_{ss}=r$; se regula a un nivel de operación normalizado $r=0.6$ ($60\%$ del rango), que deja margen de actuador en ambos sentidos para el rechazo de la perturbación de carga.
+
+\subsection*{Modelo R2ET completo (Fase~2)}
+
+En la Fase~2 se simula el balance de masa de las dos esteras:
+
+\begin{equation}
+n_i(k+1) = \operatorname{sat}_{[0,\,3]}\!\left[\,n_i(k)
+  + \underbrace{\lambda(k)\,a(k)\,r_i}_{\text{entrada}}
+  - \underbrace{\eta\,u_i(k)\,\bigl[1-\ell_i(k)\bigr]}_{\text{salida}}\,\right]
+\label{eq:r2et_aware}
+\end{equation}
+
+donde $\lambda(k)$ es el caudal de la máquina, $a(k)$ la fracción de admisión, $r_i$ el reparto del robot, $\eta=0.46$ la eficiencia nominal y $\ell_i(k)$ la pérdida por perturbación:
+$\ell_1=0.35\,d$, $\ell_2=0.175\,d$.
+
+\section{Parámetros del escenario de simulación}
+
+\begin{longtable}{@{}P{0.30\linewidth}P{0.20\linewidth}P{0.38\linewidth}@{}}
+\caption{Parámetros del escenario para ambas fases.}
+\label{tab:parametros_escenario}\\
+\toprule
+Parámetro & Valor & Descripción \\ \midrule \endfirsthead
+\toprule Parámetro & Valor & Descripción \\ \midrule \endhead
+Capacidad $N_{max}$ & 3 piezas & Máximo físico por estera.\\
+Nivel objetivo $n^*$ & 1.5 piezas & 50\% capacidad; máxima productividad con margen.\\
+Caudal base $\lambda_0$ & 0.42~p/muestra & Producción nominal de la máquina.\\
+Pulso de demanda & $+0.35$ en $k=55$--$82$ & Pico de producción.\\
+Atasco (cambio peso) & E1: $-35\%$, E2: $-17.5\%$ & Reducción de descarga en $k=95$--$118$.\\
+Umbral de riesgo & 2.4 piezas & A partir de aquí el supervisor refuerza el control.\\
+Umbral de alarma & 2.7 piezas & Acción de emergencia; reducción de admisión.\\
+Límites del actuador & $[0.05,\;1.0]$ (norm.) & Restricción física de velocidad de estera.\\
+Condición inicial & $n_1(0)=n_2(0)=1.25$ & Arranque por debajo del objetivo.\\
+\bottomrule
+\end{longtable}

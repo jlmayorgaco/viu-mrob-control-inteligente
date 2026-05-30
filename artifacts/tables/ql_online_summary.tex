@@ -1,0 +1,18 @@
+% Tabla de resultados - Act08 R2ET
+\begin{table}[H]
+\centering
+\caption{Q-Learning online: IAE por cuartil de episodios.}
+\label{tab:ql_online}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Fase & Ep. & IAE medio & Mejora \% \\
+\midrule
+Offline (línea base) & 0 & 25.7 & 0 \\
+Q1 online (ep. 1-12) & 12 & 34.2 & -32.9 \\
+Q4 online (ep. 38-50) & 13 & 40.5 & -57.3 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

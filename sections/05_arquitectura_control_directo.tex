@@ -1,0 +1,274 @@
+\chapter{4.2.c Arquitectura de control directo inteligente}
+\label{ch:arquitectura}
+
+Nota sobre herramienta de simulación. La arquitectura se documenta en dos formatos complementarios: diagramas vectoriales (TikZ) para la explicación funcional y modelos Simulink del lazo de control y del supervisor (las capturas correspondientes se incluyen en cada apartado). La simulación cuantitativa (entrenamiento, métricas y figuras de resultados) corre en Python~3.13 con NumPy, con reproducibilidad exacta (semilla fija SEED=8, sin dependencia de versión de toolbox). La planta empleada en ambos entornos es la misma discretización ZOH de la función de transferencia $G_p(s)$ asignada en la guía (Capítulo~\ref{ch:contexto}). El código fuente completo figura en el Apéndice~A.
+
+\section{Fase 1: Servoregulador}
+
+La Fase~1 valida cada controlador sobre la planta de primer orden discreta del Grupo~1 (ecuación~\ref{eq:planta_servo}), actuando como servoregulador. La señal de referencia es un escalón al nivel de operación $r=0.6$ activado en $k=10$; la perturbación de carga ($d=1$, cambio de peso en las piezas) actúa entre las muestras $k=85$ y $k=110$.
+
+El ensayo comprende tres tramos: reposo ($k<10$, $y=0$, $r=0$); escalón de referencia en $k=10$ con transitorio hacia $y=0.6$; y perturbación de carga ($d=1$) entre $k=85$ y $k=110$ que deprime la salida, seguida de la vuelta a referencia. Con un único ensayo se evalúan simultáneamente el seguimiento de referencia y el rechazo de perturbaciones.
+
+\subsection*{Diagrama de bloques del control servo}
+
+\begin{figure}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[>=Latex, every node/.style={font=\small}]
+  \tikzset{
+    block/.style={draw, rounded corners=2mm, align=center, minimum width=30mm, minimum height=12mm, fill=UniLight},
+    ctrl/.style={block, fill=UniPrimary!12, draw=UniPrimaryDeep, line width=1pt},
+    sum/.style={draw, circle, minimum size=9mm, fill=UniLight, draw=UniPrimaryDeep},
+    arr/.style={->, line width=1pt, color=UniPrimaryDeep, shorten >=1pt, shorten <=1pt},
+    fb/.style={->, dashed, line width=0.85pt, color=UniMuted, shorten >=1pt, shorten <=1pt},
+    lbl/.style={font=\small, fill=white, inner sep=1.5pt}
+  }
+  \node[block] (ref)   at (0, 0)     {Referencia\\$r(k)=0.6\cdot\mathbf{1}[k\!\geq\!10]$};
+  \node[sum]   (sum)   at (3.2, 0)   {$\Sigma$};
+  \node[ctrl]  (ctrl)  at (7.0, 0)   {Controlador\\PID / Fuzzy / DL / QL};
+  \node[block] (sat)   at (10.8, 0)  {Saturación\\$u\in[0.05,\,1]$};
+  \node[block] (plant) at (14.8, 0)  {Planta\\$y(k{+}1)=ay{+}bu{-}b_d d$};
+  \node[block] (dist)  at (13.0,-2.6){Perturbación $d(k)$\\$k=85$--$110$};
+  \coordinate (yout) at ($(plant.east)+(0.9,0)$);
+  \draw[arr] (ref.east)  -- node[lbl,above]{$r$}   (sum.west);
+  \draw[arr] (sum.east)  -- node[lbl,above]{$e$}   (ctrl.west);
+  \draw[arr] (ctrl.east) -- node[lbl,above]{$u^*$} (sat.west);
+  \draw[arr] (sat.east)  -- node[lbl,above]{$u$}   (plant.west);
+  \draw[arr] (plant.east) -- node[lbl,above,pos=0.85]{$y$} (yout);
+  \draw[fb]  (yout) -- ++(0,-1.7) -| node[lbl,pos=0.04,below]{$y(k)$} (sum.south);
+  \draw[arr] (dist.north) -- node[lbl,right]{$d$}  (plant.south);
+  \node[font=\footnotesize, color=UniPrimaryDeep] at ($(sum.west)+(0.16,0.16)$) {$+$};
+  \node[font=\footnotesize, color=UniPrimaryDeep] at ($(sum.south)+(-0.16,0.16)$) {$-$};
+\end{tikzpicture}}
+\caption{Arquitectura del lazo de control servo (Fase~1): lazo cerrado con cuatro controladores intercambiables, saturación del actuador y perturbación de carga.}
+\label{fig:control_servo}
+\end{figure}
+
+\simulinkfigure{figures/simulink/sl_pid_servo.png}{0.85}{Modelo Simulink del lazo servo digital (Fase~1): referencia, PID discreto, saturación del actuador y planta discreta (ZOH de $G_p(s)$) con perturbación de carga.}
+
+\subsection*{Explicación funcional de cada bloque}
+
+\begin{longtable}{@{}P{0.18\linewidth}P{0.28\linewidth}P{0.42\linewidth}@{}}
+\toprule
+Bloque & Función & Detalles de implementación \\ \midrule
+Referencia & Genera el escalón de referencia & $r(k) = 0.6\cdot\mathbf{1}[k \geq 10]$; nivel de operación.\\
+Sumador $\Sigma$ & Error de seguimiento & $e(k) = r(k) - y(k)$; diferencia puntual en cada muestra.\\
+Controlador & Calcula el mando $u^*$ & PID: anti-windup; Fuzzy: reglas Mamdani; DL: inferencia red; QL: tabla Q greedy.\\
+Saturación & Limita el mando & $u(k) = \operatorname{sat}(u^*, 0.05, 1.0)$; restricción física del actuador.\\
+Planta & Dinámica de la estera & $y(k{+}1) = 0.92\,y + 0.08\,u - 0.024\,d$; $a=0.92$, $b=0.08$, $b_d=0.024$.\\
+Perturbación & Cambio de peso & $d(k)=1$ durante $k=85$--$110$; simula piezas pesadas que reducen descarga.\\
+\bottomrule
+\end{longtable}
+
+\subsection*{Diagramas de arquitectura interna de cada controlador}
+
+\subsubsection*{PID discreto con feedforward}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[>=Latex, every node/.style={font=\scriptsize}]
+  \tikzset{
+    blk/.style={draw, rounded corners=1.5mm, align=center, minimum width=22mm, minimum height=9mm, fill=UniLight, draw=UniPrimaryDeep},
+    io/.style={blk, fill=UniPrimary!12},
+    sumb/.style={draw, rounded corners=1.5mm, align=center, minimum width=12mm, minimum height=52mm, fill=UniPrimary!12, draw=UniPrimaryDeep, line width=1pt},
+    arr/.style={->, line width=0.8pt, color=UniPrimaryDeep},
+    wire/.style={line width=0.8pt, color=UniPrimaryDeep}
+  }
+  % Entrada, bloques de términos, sumador y salida (bien espaciados)
+  \node[io]  (e)   at (0,-0.25)   {Entrada\\$e(k)$};
+  \node[blk] (kp)  at (4.0, 2.00) {$K_p \cdot e$};
+  \node[blk] (ki)  at (4.0, 0.50) {$K_i \cdot \sigma$ (AW)};
+  \node[blk] (kd)  at (4.0,-1.00) {$K_d \cdot \Delta e$};
+  \node[blk] (ff)  at (4.0,-2.50) {FF: $u_{ff}$};
+  \node[sumb] (sum) at (7.6,-0.25) {$\Sigma$};
+  \node[io]   (out) at (10.4,-0.25) {Salida\\$u^*(k)$};
+  % Bus de entrada: e -> nodo de reparto -> 4 ramas horizontales
+  \coordinate (ej) at (1.9,-0.25);
+  \draw[wire] (e.east) -- (ej);
+  \fill[UniPrimaryDeep] (ej) circle (1.4pt);
+  \draw[wire] (1.9,2.00) -- (1.9,-2.50);
+  \draw[arr] (1.9, 2.00) -- (kp.west);
+  \draw[arr] (1.9, 0.50) -- (ki.west);
+  \draw[arr] (1.9,-1.00) -- (kd.west);
+  \draw[arr] (1.9,-2.50) -- (ff.west);
+  % Salida de cada término: flechas horizontales paralelas al sumador
+  \draw[arr] (kp.east) -- (kp.east -| sum.west);
+  \draw[arr] (ki.east) -- (ki.east -| sum.west);
+  \draw[arr] (kd.east) -- (kd.east -| sum.west);
+  \draw[arr] (ff.east) -- (ff.east -| sum.west);
+  \draw[arr] (sum.east) -- node[above, font=\tiny]{$u^*$} (out.west);
+\end{tikzpicture}
+\caption{Arquitectura interna del controlador PID discreto: término proporcional, integral con anti-windup (AW), derivativo y feedforward (FF).}
+\label{fig:pid_arch}
+\end{figure}
+
+\subsubsection*{Controlador difuso Mamdani}
+
+\begin{figure}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[>=Latex, every node/.style={font=\small}]
+  \tikzset{
+    fblock/.style={draw, rounded corners=2mm, align=center, minimum width=32mm, minimum height=13mm, fill=UniLight, draw=UniPrimaryDeep},
+    fcore/.style={fblock, fill=UniPrimary!12, line width=1pt},
+    farr/.style={->, line width=1pt, color=UniPrimaryDeep}
+  }
+  \node[fblock] (in)  at (0,0)    {Entradas\\$e,\;\Delta e,\;d$};
+  \node[fcore]  (fz)  at (4.5,0)  {Fuzzificación\\$\mu_E,\;\mu_{\Delta E},\;\mu_D$};
+  \node[fcore]  (inf) at (9.0,0)  {Inferencia\\AND = mín\\$w_j = \mu_E \wedge \mu_{\Delta E}$};
+  \node[fcore]  (def) at (13.5,0) {Defuzzificación\\WA singletons\\$u=\dfrac{\sum w_j c_j}{\sum w_j}$};
+  \node[fblock] (out) at (18.0,0) {Salida\\$u^*(k)$};
+  \draw[farr] (in.east)  -- (fz.west);
+  \draw[farr] (fz.east)  -- (inf.west);
+  \draw[farr] (inf.east) -- (def.west);
+  \draw[farr] (def.east) -- (out.west);
+\end{tikzpicture}}
+\caption{Flujo de cálculo del controlador difuso Mamdani: fuzzificación → inferencia AND-mín con 35 reglas → defuzzificación por promedio ponderado de los consecuentes.}
+\label{fig:fuzzy_flow}
+\end{figure}
+
+\simulinkfigure{figures/simulink/sl_control_directo.png}{0.9}{Modelo Simulink de la arquitectura de control digital directo inteligente (4.2.c): referencia → error → controlador inteligente directo (fuzzificación, inferencia AND-mín, defuzzificación WA) → saturación → planta. El bloque del controlador es intercambiable (Fuzzy/DL/QL).}
+
+\subsubsection*{Deep Learning (red profunda)}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[>=Latex, every node/.style={font=\scriptsize}]
+  \tikzset{
+    inp/.style={circle, draw=UniPrimaryDeep, fill=UniPrimary!12, minimum size=7mm},
+    hid/.style={draw, rounded corners=1.5mm, align=center, fill=UniLight, draw=UniPrimaryDeep, minimum width=14mm},
+    onode/.style={circle, draw=UniPrimaryDeep, fill=UniPrimary!25, minimum size=7mm},
+    arr/.style={->, line width=0.8pt, color=UniPrimaryDeep},
+    nn/.style={->, line width=0.45pt, color=UniPrimaryDeep!45, shorten >=0.5pt},
+    lbl/.style={font=\tiny\bfseries\color{UniPrimaryDeep}}
+  }
+  \node[inp] (e)   at (0, 1.65) {$e$};
+  \node[inp] (de)  at (0, 0.55) {$\Delta e$};
+  \node[inp] (sg)  at (0,-0.55) {$\sigma$};
+  \node[inp] (d)   at (0,-1.65) {$d$};
+  \node[hid, minimum height=40mm] (h1) at (3.0,0) {64\\$\tanh$};
+  \node[hid, minimum height=28mm] (h2) at (5.2,0) {32\\$\tanh$};
+  \node[hid, minimum height=18mm] (h3) at (7.4,0) {16\\$\tanh$};
+  \node[hid, minimum height=11mm] (h4) at (9.6,0) {8\\$\tanh$};
+  \node[onode] (u)  at (11.8,0) {$u$};
+  \node[font=\tiny, below=0.5mm of u] {$\sigma_{out}$};
+  \node[lbl, above=2mm] at (0,2.2)    {Entrada (4)};
+  \node[lbl] at (5.2,2.4)  {Capas ocultas};
+  \node[lbl, above=2mm] at (11.8,1.1) {Salida};
+  \foreach \s in {e, de, sg, d} { \draw[nn] (\s.east) -- (\s.east -| h1.west); }
+  \draw[arr] (h1.east) -- (h2.west);
+  \draw[arr] (h2.east) -- (h3.west);
+  \draw[arr] (h3.east) -- (h4.west);
+  \draw[arr] (h4.east) -- (u.west);
+\end{tikzpicture}
+\caption{Arquitectura de la red profunda Fase~1 servo: $4\!\to\!64\!\to\!32\!\to\!16\!\to\!8\!\to\!1$. La integral acumulada $\sigma=\sum e(j)$ se añade al estado del controlador, necesaria para eliminar el error estacionario.}
+\label{fig:dl_servo_arch}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[>=Latex, every node/.style={font=\scriptsize}]
+  \tikzset{
+    inp/.style={circle, draw=UniPrimaryDeep, fill=UniPrimary!12, minimum size=6.5mm, font=\tiny},
+    hid/.style={draw, rounded corners=1.5mm, align=center, fill=UniLight, draw=UniPrimaryDeep, minimum width=14mm},
+    onode/.style={circle, draw=UniPrimaryDeep, fill=UniPrimary!25, minimum size=6.5mm, font=\tiny},
+    arr/.style={->, line width=0.8pt, color=UniPrimaryDeep},
+    nn/.style={->, line width=0.45pt, color=UniPrimaryDeep!45, shorten >=0.5pt},
+    lbl/.style={font=\tiny\bfseries\color{UniPrimaryDeep}}
+  }
+  \node[inp] (e1)  at (0, 3.15)  {$e_1$};
+  \node[inp] (e2)  at (0, 2.25)  {$e_2$};
+  \node[inp] (de1) at (0, 1.35)  {$\Delta n_1$};
+  \node[inp] (de2) at (0, 0.45)  {$\Delta n_2$};
+  \node[inp] (sg1) at (0,-0.45)  {$\sigma_1$};
+  \node[inp] (sg2) at (0,-1.35)  {$\sigma_2$};
+  \node[inp] (b)   at (0,-2.25)  {$b$};
+  \node[inp] (dv)  at (0,-3.15)  {$d$};
+  \node[hid, minimum height=68mm, minimum width=12mm] (h1) at (2.9,0)  {96\\$\tanh$};
+  \node[hid, minimum height=52mm, minimum width=12mm] (h2) at (4.9,0)  {64\\$\tanh$};
+  \node[hid, minimum height=38mm, minimum width=12mm] (h3) at (6.9,0)  {32\\$\tanh$};
+  \node[hid, minimum height=24mm, minimum width=12mm] (h4) at (8.9,0)  {16\\$\tanh$};
+  \node[hid, minimum height=14mm, minimum width=12mm] (h5) at (10.9,0) {8\\$\tanh$};
+  \node[onode] (u1) at (13.2, 0.95) {$u_1$};
+  \node[onode] (u2) at (13.2, 0.00) {$u_2$};
+  \node[onode] (r1) at (13.2,-0.95) {$r_1$};
+  \node[lbl, above=2mm] at (0,3.7)    {Entrada (8)};
+  \node[lbl] at (6.9,4.0)  {Capas ocultas (5)};
+  \node[lbl, above=2mm] at (13.2,1.5) {Salidas (3)};
+  \foreach \s in {e1, e2, de1, de2, sg1, sg2, b, dv} { \draw[nn] (\s.east) -- (\s.east -| h1.west); }
+  \draw[arr] (h1.east) -- (h2.west);
+  \draw[arr] (h2.east) -- (h3.west);
+  \draw[arr] (h3.east) -- (h4.west);
+  \draw[arr] (h4.east) -- (h5.west);
+  \draw[arr] (h5.east) -- (u1.west);
+  \draw[arr] (h5.east) -- (u2.west);
+  \draw[arr] (h5.east) -- (r1.west);
+\end{tikzpicture}
+\caption{Arquitectura de la red profunda Fase~2 aware (más profunda que el servo): $8\!\to\!96\!\to\!64\!\to\!32\!\to\!16\!\to\!8\!\to\!3$. Las entradas $\sigma_1, \sigma_2$ son las integrales acumuladas por estera. Salidas: $u_1$, $u_2$ y reparto $r_1$ (sigmoide).}
+\label{fig:dl_aware_arch}
+\end{figure}
+
+\subsubsection*{Q-Learning tabular}
+
+\begin{figure}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[>=Latex, every node/.style={font=\small}]
+  \tikzset{
+    blk/.style={draw, rounded corners=2mm, align=center, minimum width=34mm, minimum height=14mm, fill=UniLight, draw=UniPrimaryDeep},
+    qblk/.style={blk, fill=UniPrimary!12, line width=1pt},
+    arr/.style={->, line width=1pt, color=UniPrimaryDeep}
+  }
+  \node[blk]  (obs)  at (0,0)    {Observación\\$e,\;\Delta e,\;d$\\(servo)};
+  \node[blk]  (enc)  at (5.0,0)  {Codificación\\$s=f(e,\Delta e,d)$\\$s \in \{0,\ldots,99\}$};
+  \node[qblk] (qt)   at (10.0,0) {Tabla Q\\$Q(s,a)$\\$100 \times 8$};
+  \node[blk]  (arg)  at (15.0,0) {$\arg\max_a Q(s,a)$\\política greedy};
+  \node[blk]  (act)  at (20.0,0) {Acción\\$u = u_a \in$\\$\{0.10,\ldots,1.0\}$};
+  \draw[arr] (obs.east) -- (enc.west);
+  \draw[arr] (enc.east) -- (qt.west);
+  \draw[arr] (qt.east)  -- (arg.west);
+  \draw[arr] (arg.east) -- (act.west);
+\end{tikzpicture}}
+\caption{Arquitectura de despliegue del Q-Learning servo (Fase~1): codificación del estado → consulta greedy de la tabla Q → acción discreta de velocidad.}
+\label{fig:ql_arch}
+\end{figure}
+
+\section{Fase 2: Coordinación aware R2ET}
+
+En la Fase~2, el esquema de control se extiende al sistema de dos esteras. Cada controlador recibe el estado completo $\{n_1, n_2, d\}$ y genera las señales de velocidad $u_1$, $u_2$ y reparto del robot $r_1$. Sobre estas señales actúa una capa de supervisión de capacidad independiente del controlador primario (detallada en el Capítulo~\ref{ch:supervisor}).
+
+\begin{figure}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[>=Latex, every node/.style={font=\small}]
+  \tikzset{
+    block/.style={draw, rounded corners=2mm, align=center, minimum width=30mm, minimum height=13mm, fill=UniLight},
+    ctrl/.style={block, fill=UniPrimary!12, draw=UniPrimaryDeep, line width=1pt},
+    sup/.style={block, fill=UniLight, draw=UniMuted, line width=1pt},
+    arr/.style={->, line width=1pt, color=UniPrimaryDeep},
+    farr/.style={->, dashed, line width=0.85pt, color=UniMuted},
+    fwire/.style={dashed, line width=0.85pt, color=UniMuted},
+    lbl/.style={font=\small, fill=white, inner sep=1.5pt}
+  }
+  \node[block] (ref)   at (0, 0)     {Referencia\\$n^*=1.5$};
+  \node[ctrl]  (ctrl)  at (4.5, 0)   {Controlador\\PID/Fuzzy/DL/QL\\$\{u_1^*,u_2^*,r_1^*\}$};
+  \node[sup]   (sv)    at (9.0, 0)   {Supervisor\\capacidad\\$n_{max},\;d$};
+  \node[block] (belt)  at (13.5, 0)  {Esteras R2ET\\$n_1(k),\;n_2(k)$};
+  \node[block] (robot) at (13.5, 2.7){Robot / Planta\\$\lambda(k),\;d(k)$};
+  % Cadena directa
+  \draw[arr] (ref.east)   -- node[lbl,above]{$r$}         (ctrl.west);
+  \draw[arr] (ctrl.east)  -- node[lbl,above]{$u^*,r_1^*$} (sv.west);
+  \draw[arr] (sv.east)    -- node[lbl,above]{$u,r_1,a$}   (belt.west);
+  % Caudal/perturbación entran desde arriba (robot sobre las esteras)
+  \draw[arr] (robot.south) -- node[lbl,right]{$\lambda,d$} (belt.north);
+  % Realimentación de nivel: bus inferior único con dos tomas limpias
+  \draw[fwire] (belt.south) -- (13.5,-2.1) -- (4.5,-2.1);
+  \draw[farr]  (9.0,-2.1) -- node[lbl,right,pos=0.55]{$n_{max}$} (sv.south);
+  \draw[farr]  (4.5,-2.1) -- node[lbl,right,pos=0.55]{$n_1,n_2$} (ctrl.south);
+  \fill[UniMuted] (9.0,-2.1) circle (1.4pt);
+\end{tikzpicture}}
+\caption{Arquitectura de control aware Fase~2: controlador primario + supervisor de capacidad (capa de seguridad) → esteras R2ET. La perturbación $d$ y el caudal $\lambda$ del robot entran al modelo de las esteras.}
+\label{fig:control_aware}
+\end{figure}
+
+\simulinkfigure{figures/simulink/sl_r2et_aware.png}{0.9}{Modelo Simulink de la coordinación R2ET (Fase~2): controlador genera $u_1,u_2,r_1$; el supervisor de capacidad actúa como barrera de seguridad sobre las dos esteras (capacidad 3~piezas).}

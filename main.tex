@@ -1,0 +1,150 @@
+\documentclass[11pt,oneside]{report}
+\usepackage{viu-mrob-activity}
+\setlength{\headheight}{23.12pt}
+\usepackage{amsmath, amssymb, booktabs, array, graphicx, caption, subcaption, float, placeins, colortbl, longtable, tikz}
+\usepackage[table]{xcolor}
+\usepackage{geometry, enumitem, siunitx, listings, upquote}
+\sisetup{output-decimal-marker={,}, per-mode=symbol, detect-weight=true, detect-family=true}
+
+% ── lstlistings ──────────────────────────────────────────────────────────────
+\lstdefinelanguage{Python}{
+  keywords={def,class,return,if,else,elif,for,while,import,from,as,True,False,None,
+            and,or,not,in,is,lambda,pass,break,continue,raise,try,except,with,yield},
+  sensitive=true,
+  comment=[l]{\#},
+  morestring=[b]',
+  morestring=[b]"
+}
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  numbers=left, numberstyle=\tiny\color{UniMuted},
+  showstringspaces=false, breaklines=true,
+  columns=fullflexible, keepspaces=true, upquote=true,
+  frame=single, rulecolor=\color{UniPrimary!55},
+  tabsize=4,
+  keywordstyle=\color{UniPrimaryDeep}\bfseries,
+  commentstyle=\color{UniMuted}\itshape,
+  stringstyle=\color{UniPrimary!80!black}
+}
+
+% ── TikZ ─────────────────────────────────────────────────────────────────────
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit, shapes.symbols}
+
+% ── Tipos de columna ─────────────────────────────────────────────────────────
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% ── Rutas de figuras ─────────────────────────────────────────────────────────
+\graphicspath{
+  {images/}
+  {images/institutional/}
+  {figures/}
+  {figures/plots/}
+  {figures/simulink/}
+  {artifacts/tables/}
+}
+
+% ── Metadatos PDF ─────────────────────────────────────────────────────────────
+\hypersetup{
+  pdftitle={Actividad 08: Control inteligente y supervisión avanzada en CMF R2ET},
+  pdfauthor={Grupo 1, MROB VIU 2025/2026},
+  pdfsubject={Control Inteligente y Aprendizaje Automático},
+  pdfkeywords={control inteligente, supervisión avanzada, fuzzy, deep learning,
+               Q-learning, PID, CMF, R2ET, Industria 4.0}
+}
+
+% ── Portada VIU ───────────────────────────────────────────────────────────────
+\SetVIULogoPath{images/institutional/}
+\SetVIULogo{logo-viu-w}
+\SetVIUCoverBgPath{images/institutional/bg3-viu}
+\SetVIUMaster{Máster Universitario en Robótica y Automatización de Procesos Industriales (MROB)}
+\SetVIUSubject{Control Inteligente y Aprendizaje Automático}
+\SetVIUGrupo{Grupo 1, Caso R2ET}
+\SetVIUFileName{Grupo_1_Act_08MPRO.pdf}
+\SetVIUActivityType{Actividad 08 MROB}
+\SetVIUActivityTitle{Diseño de configuración de sistema inteligente avanzado integrado\\[4pt]en una Celda de Manufactura Flexible}
+\SetVIUProfessor{Equipo docente VIU}
+\SetVIUContributors{%
+  \textbf{Estudiantes}\\[4pt]
+  \small
+  William Enrique Fernandez Rodriguez\\
+  Luis Miguel Huerta Carlin\\[4pt]
+  Jorge Luis Mayorga Taborda\\
+  Juan Pablo Mendez Prada\\
+  Diego Alonso Pinto Vizcarra
+}
+\SetVIUDate{\today}
+
+% ── Espaciado de párrafos ─────────────────────────────────────────────────────
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.35\baselineskip}
+
+% ── Macro para figuras con fallback ──────────────────────────────────────────
+\definecolor{missingBack}{RGB}{248,250,252}
+\definecolor{missingFrame}{RGB}{232,85,45}
+
+\newcommand{\missingartifactbox}[1]{%
+  \begin{center}
+    \fcolorbox{missingFrame!70!black}{missingBack}{%
+      \begin{minipage}{0.88\linewidth}
+        \centering\small #1
+      \end{minipage}%
+    }
+  \end{center}
+}
+
+\newcommand{\artifactfigure}[3]{%
+  \IfFileExists{#1}{%
+    \begin{figure}[H]
+      \centering
+      \includegraphics[width=#2\linewidth]{#1}
+      \caption{#3}
+    \end{figure}
+  }{%
+    \missingartifactbox{Figura pendiente de generación: \texttt{\detokenize{#1}}. \\
+    Ejecutar: \texttt{python src/python/v2\_simulate.py}}%
+  }%
+}
+
+% Captura de modelo Simulink (insertar el PNG en figures/simulink/)
+\newcommand{\simulinkfigure}[3]{%
+  \IfFileExists{#1}{%
+    \begin{figure}[H]
+      \centering
+      \includegraphics[width=#2\linewidth]{#1}
+      \caption{#3}
+    \end{figure}
+  }{%
+    \begin{figure}[H]\centering
+    \missingartifactbox{\textbf{Captura del modelo Simulink} (pendiente de inserción): \texttt{\detokenize{#1}}.}
+    \caption{#3}
+    \end{figure}
+  }%
+}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{document}
+
+\MakeVIUActivityTitle
+\tableofcontents
+\newpage
+
+\input{sections/01_introduccion}
+\input{sections/02_contexto_cmf_r2et}
+\input{sections/03_requisitos_especificaciones}
+\input{sections/04_diseno_control_inteligente}
+\input{sections/05_arquitectura_control_directo}
+\input{sections/06_supervisor_pid_inteligente}
+\input{sections/07_pruebas_indicadores}
+\input{sections/08_mejoras_industria_40}
+\input{sections/09_conclusiones}
+
+\cleardoublepage
+\addcontentsline{toc}{chapter}{Bibliografía}
+\bibliographystyle{ieeetr}
+\bibliography{references}
+
+\appendix
+\input{sections/A_codigo_simulacion}
+
+\end{document}

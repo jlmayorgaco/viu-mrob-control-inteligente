@@ -1,0 +1,114 @@
+\chapter{Programas elaborados}
+\label{ap:codigo}
+
+La simulación completa (entrenamiento de los modelos, evaluación de los cuatro métodos en Fase~1 y Fase~2, y generación de figuras y tablas) está implementada en Python sobre NumPy, pandas y matplotlib, sin dependencias de frameworks externos (PyTorch, TensorFlow, scikit-learn). La red profunda y el Q-Learning se implementan directamente con operaciones matriciales, lo que garantiza reproducibilidad exacta con independencia de la versión de la librería.
+
+Se incluyen los extractos del código que implementan cada controlador y la dinámica de la planta.
+
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\scriptsize,
+  numbers=left, numberstyle=\tiny,
+  breaklines=true, columns=fullflexible,
+  keepspaces=true, upquote=true,
+  frame=single, tabsize=4,
+  keywordstyle=\color{UniPrimaryDeep}\bfseries,
+  commentstyle=\color{UniMuted}\itshape,
+  stringstyle=\color{UniPrimary!80!black},
+  showstringspaces=false
+}
+
+\begin{lstlisting}[language=Python, caption={Planta discreta R2ET Grupo~1 y controlador PID con anti-windup.}]
+# Planta de primer orden discreta (ZOH de Gp(s), Ts = tau/12) - ecuacion 2.6
+A = 0.92    # polo discreto = e^(-Ts/tau)
+B = 0.08    # ganancia de control = K_f(1-a), K_f = Gp(0) = 1.0
+Bd = 0.024  # ganancia de perturbacion de carga = K_d(1-a)
+SV_REF = 0.6              # referencia de operacion normalizada
+Uff = SV_REF * (1.0 - A) / B  # feedforward: u_ss = 0.60
+
+# y(k+1) = A*y(k) + B*u(k) - Bd*d(k)
+
+# PID discreto con anti-windup condicional
+def pid_step(e, st, kp, ki, kd, u_min=0.0, u_max=1.0, aw_lim=6.0, ff=0.0):
+    de  = e - st.prev_e
+    raw = ff + kp*e + ki*st.integral + kd*de
+    u   = float(np.clip(raw, u_min, u_max))
+    if not (raw > u_max and e > 0) and not (raw < u_min and e < 0):
+        st.integral = float(np.clip(st.integral + e, -aw_lim, aw_lim))
+    st.prev_e = e
+    return u
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, caption={Controlador difuso Mamdani: fuzzificacion, inferencia AND-minimo y defuzzificacion por singletons.}]
+# FAM de 35 reglas: 7 conjuntos de error (niveles -3..3) x 5 de derivada (-2..2)
+# Consecuente por niveles: c = u_base + nivel_e*0.12 + nivel_de*0.05
+NIVEL_E  = {"NL":-3,"NM":-2,"NS":-1,"ZE":0,"PS":1,"PM":2,"PL":3}
+NIVEL_DE = {"NB":-2,"NS":-1,"ZE":0,"PS":1,"PB":2}
+
+def velocidad_difusa(e, de, d, u_base):
+    mu_e  = membresia_error(e)      # 7 conjuntos
+    mu_de = membresia_derivada(de)  # 5 conjuntos
+    num = den = 0.0
+    for el, me in mu_e.items():
+        if me < 1e-9: continue
+        for dl, md in mu_de.items():
+            w = min(me, md)         # AND = minimo (Zadeh)
+            if w < 1e-9: continue
+            c = np.clip(u_base + NIVEL_E[el]*0.12 + NIVEL_DE[dl]*0.05, 0.05, 0.98)
+            num += w * c;  den += w
+    # Regla adicional de perturbacion: IF d=CON THEN velocidad alta
+    dw = membresia_perturbacion(d)["CON"]
+    if dw > 1e-9:
+        num += dw * np.clip(u_base + 0.30, 0.05, 0.98); den += dw
+    return float(np.clip(num / den, 0.05, 0.98)) if den > 1e-9 else float(u_base)
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, caption={Actualizacion TD(0) del Q-Learning y codificacion de estado para la coordinacion de esteras.}]
+# Estado: (nivel_E1_bin, nivel_E2_bin, perturbacion_bin) -> 9x9x2 = 162 estados
+# Bins no uniformes, densos cerca de n* = 1.5:
+EDGES = [0.0, 0.5, 0.9, 1.2, 1.4, 1.6, 1.8, 2.1, 2.5, 3.1]
+# Acciones: 11 combinaciones de (velocidad, reparto_E1, admision)
+ACCIONES = np.array([
+    [0.30, 0.50, 1.00],  # lento: dejar que las esteras se llenen
+    [0.46, 0.50, 1.00],  # estado estacionario equilibrado (~u_ss)
+    [0.58, 0.50, 1.00],  # drenado moderado equilibrado
+    [0.70, 0.50, 0.95],  # drenado rapido equilibrado
+    [0.84, 0.50, 0.85],  # drenado fuerte
+    [0.95, 0.50, 0.78],  # drenado de emergencia
+    [0.52, 0.30, 1.00],  # drenado suave + prioridad E2
+    [0.52, 0.70, 1.00],  # drenado suave + prioridad E1
+    [0.72, 0.30, 0.90],  # drenado rapido + prioridad E2
+    [0.72, 0.70, 0.90],  # drenado rapido + prioridad E1
+    [0.62, 0.50, 1.00],  # drenado fino cerca del objetivo
+])
+
+# Actualizacion TD(0): regla de Bellman
+r = -1.5*iae - 30.0*violacion - 8.0*alarma - 0.20*desbalance
+Q[s, a] += alpha * (r + gamma * np.max(Q[s_siguiente]) - Q[s, a])
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, caption={Bucle de simulacion Fase~2: controlador difuso mas supervisor de capacidad.}]
+for k in range(1, N_muestras):
+    dm = demanda(k)
+    ls = perdida_por_perturbacion(k)     # [0.35*d, 0.175*d]
+    nm = max(n[k-1])
+    e  = n[k-1] - n_objetivo
+    de = e - e_anterior
+
+    # 1. Controlador difuso: velocidad por estera
+    uk = [velocidad_difusa(e[i], de[i], d, u_base) for i in range(2)]
+
+    # 2. Supervisor de capacidad (barrera de seguridad)
+    if nm > umbral_alarma:
+        uk = np.clip(uk + 0.14, 0.05, 1.0)
+        admision = 0.72
+    elif nm > umbral_riesgo:
+        uk = np.clip(uk + 0.07, 0.05, 1.0)
+        admision = 0.90
+
+    # 3. Reparto difuso del robot
+    r1 = reparto_difuso(n[k-1,0] - n[k-1,1])
+
+    # 4. Dinamica de las dos esteras (balance de masa)
+    n[k], salida[k] = paso_estera(n[k-1], uk, r1, admision, dm, ls)
+\end{lstlisting}
