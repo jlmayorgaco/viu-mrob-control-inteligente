@@ -31,13 +31,7 @@ La celda del Grupo~1 contiene una máquina de proceso, un robot de transferencia
 
 \section{Problema de control}
 
-Que el robot alterne es lo fácil. Lo difícil es decidir \emph{cuánto} alimentar a cada estera y \emph{a qué velocidad} descargarlas. Tres situaciones lo complican.
-
-La primera es la saturación. Si el robot sigue depositando piezas sobre una estera casi llena, el margen se agota en pocas muestras, así que el control tiene que anticiparla y redirigir el flujo antes de que ocurra.
-
-La segunda es la opuesta, el vaciado: con una descarga demasiado rápida frente al flujo de entrada, la estera se queda vacía y la línea de salida se corta. Por eso el nivel objetivo se fija en $1.5$~piezas, el $50\%$ de la capacidad, que deja margen en ambos sentidos.
-
-La tercera es el cambio de peso. Las piezas más pesadas rozan más sobre la estera y la eficiencia de descarga cae hasta un $35\%$ en E1 y un $17.5\%$ en E2 mientras dura la perturbación. El controlador debe notar esa caída y reaccionar (acelerar la estera, recortar la admisión o desviar el robot hacia E2) sin esperar a que el nivel toque el umbral de alarma.
+La alternancia del robot por sí sola no resuelve el problema de control. La decisión crítica es cuánto flujo asignar a cada estera y a qué velocidad descargarlas. El problema se complica por tres factores: la saturación, que obliga a redirigir el flujo antes de agotar el margen de capacidad; el vaciado, que corta la línea de salida si la descarga supera de forma sostenida al flujo de entrada; y el cambio de peso de las piezas, que reduce la eficiencia de descarga hasta un $35\%$ en E1 y un $17.5\%$ en E2. El controlador debe detectar esa caída y reaccionar (acelerar la estera, recortar la admisión o desviar el robot hacia E2) sin esperar a que el nivel alcance el umbral de alarma.
 
 \section{Modelo dinámico}
 
@@ -54,7 +48,7 @@ Esta es una planta de segundo orden con un cero real. Sus características princ
 
 \begin{itemize}
   \item Frecuencia natural no amortiguada: $\omega_n = \sqrt{0.3744} = 0.612$~rad/s
-  \item Factor de amortiguamiento: $\zeta = \dfrac{0.785}{2\,\omega_n} = \dfrac{0.785}{1.224} = 0.641$ \quad (subamortiguado bien amortiguado)
+  \item Factor de amortiguamiento: $\zeta = \dfrac{0.785}{2\,\omega_n} = \dfrac{0.785}{1.224} = 0.641$ \quad (subamortiguado con oscilación leve, próximo al amortiguamiento crítico)
   \item Polos complejos conjugados:
         \[s_{1,2} = -\zeta\omega_n \pm j\,\omega_n\sqrt{1-\zeta^2}
                   = -0.393 \pm j\,0.470 \;\text{rad/s}\]
@@ -76,11 +70,15 @@ G_1(s) = \frac{K_f}{\tau_d\,s + 1}, \qquad K_f = G_p(0) = 1.0,\quad \tau_d = 2.5
 \label{eq:planta_reducida}
 \end{equation}
 
+La figura siguiente compara la respuesta al escalón de $G_p(s)$ y de $G_1(s)$. La reducción reproduce la ganancia final y la escala temporal dominante, aunque simplifica el transitorio de la planta completa (error máximo de $19.3\%$ en la respuesta normalizada). Por ello se usa como banco comparativo de servorregulación en Fase~1; la coordinación de la celda se evalúa aparte con el balance de masa R2ET.
+
+\artifactfigure{figures/plots/fig_reduccion_planta.png}{0.82}{Respuesta al escalón de la planta completa asignada al Grupo~1 frente al modelo reducido de primer orden usado en Fase~1.}
+
 La perturbación de carga (cambio de peso, que reduce la eficiencia de descarga) se modela como un término aditivo $-K_d\,d(t)$ sobre la dinámica.
 
 \subsection*{Discretización ZOH: planta servo (Fase~1)}
 
-El período de muestreo de la planta servo se fija por el criterio de doce muestras por constante de tiempo dominante: $T_s = \tau_d/12 = 0.2125$~s. Conviene distinguir dos escalas temporales: este $T_s$ es el de la dinámica servo local de la Fase~1, mientras que la coordinación de la celda R2ET (Fase~2) y las capas de Industria~4.0 operan a un ciclo nominal mayor, de $1$~s. La discretización por retenedor de orden cero (ZOH) de un primer orden da el polo discreto $a = e^{-T_s/\tau_d}$, con $b = K_f(1-a)$ y $b_d = K_d(1-a)$:
+El período de muestreo de la planta servo se fija por el criterio de doce muestras por constante de tiempo dominante: con $\tau_d \approx 2.55$~s, $T_s = \tau_d/12 \approx 0.2125$~s. Conviene distinguir dos escalas temporales: este $T_s$ es el de la dinámica servo local de la Fase~1, mientras que la coordinación de la celda R2ET (Fase~2) y las capas de Industria~4.0 operan a un ciclo nominal mayor, de $1$~s. La discretización por retenedor de orden cero (ZOH) de un primer orden da el polo discreto $a = e^{-T_s/\tau_d}$, con $b = K_f(1-a)$ y $b_d = K_d(1-a)$:
 
 \begin{equation}
 \boxed{y(k+1) = \underbrace{0.92}_a\,y(k) + \underbrace{0.08}_b\,u(k) - \underbrace{0.024}_{b_d}\,d(k)}
@@ -104,17 +102,29 @@ Como la ganancia DC es unitaria, el régimen estacionario exige $u_{ss}=r$; se r
 
 \subsection*{Modelo R2ET completo (Fase~2)}
 
-En la Fase~2 se simula el balance de masa de las dos esteras:
+En la Fase~2 se simula el balance de masa de las dos esteras. Primero se calcula el estado físico no recortado:
 
 \begin{equation}
-n_i(k+1) = \operatorname{sat}_{[0,\,3]}\!\left[\,n_i(k)
+\tilde n_i(k+1) = n_i(k)
   + \underbrace{\lambda(k)\,a(k)\,r_i}_{\text{entrada}}
-  - \underbrace{\eta\,u_i(k)\,\bigl[1-\ell_i(k)\bigr]}_{\text{salida}}\,\right]
+  - \underbrace{\eta\,u_i(k)\,\bigl[1-\ell_i(k)\bigr]}_{\text{salida}}
+\label{eq:r2et_raw}
+\end{equation}
+
+El estado usado por la simulación solo se satura por abajo, porque no puede haber ocupación negativa:
+\begin{equation}
+n_i(k+1)=\max\!\left(0,\tilde n_i(k+1)\right)
 \label{eq:r2et_aware}
 \end{equation}
 
 donde $\lambda(k)$ es el caudal de la máquina, $a(k)$ la fracción de admisión, $r_i$ el reparto del robot, $\eta=0.46$ la eficiencia nominal y $\ell_i(k)$ la pérdida por perturbación:
 $\ell_1=0.35\,d$, $\ell_2=0.175\,d$.
+
+La capacidad de tres piezas no se usa como recorte superior de la planta. Se evalúa como restricción de seguridad mediante
+\[
+\text{viol}_i(k)=\max\!\left(0,\tilde n_i(k)-3\right),
+\]
+de forma que un controlador deficiente no pueda ocultar el desbordamiento mediante saturación numérica.
 
 \section{Parámetros del escenario de simulación}
 
@@ -129,7 +139,7 @@ Nivel objetivo $n^*$ & 1.5 piezas & 50\% capacidad; máxima productividad con ma
 Caudal base $\lambda_0$ & 0.42~p/muestra & Producción nominal de la máquina.\\
 Pulso de demanda & $+0.35$ en $k=55$--$82$ & Pico de producción.\\
 Atasco (cambio peso) & E1: $-35\%$, E2: $-17.5\%$ & Reducción de descarga en $k=95$--$118$.\\
-Umbral de riesgo & 2.4 piezas & A partir de aquí el supervisor refuerza el control.\\
+Umbral de riesgo & 2.4 piezas & Desde este nivel el supervisor refuerza el control.\\
 Umbral de alarma & 2.7 piezas & Acción de emergencia; reducción de admisión.\\
 Límites del actuador & $[0.05,\;1.0]$ (norm.) & Restricción física de velocidad de estera.\\
 Condición inicial & $n_1(0)=n_2(0)=1.25$ & Arranque por debajo del objetivo.\\

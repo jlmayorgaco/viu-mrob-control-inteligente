@@ -1,4 +1,4 @@
-Metodo,DIAE_pct,DProd,DEnerg,DDesbal
-Fuzzy,-226.2,0.0,0.12,-9.1
-DL,-94.1,0.27,0.62,-172.7
-QL,-125.7,-2.58,-5.79,-27.3
+Metodo,IAE_rel,DProd,DEnerg,Desbal_rel
+Fuzzy,3.26,0.0,-0.12,1.09
+DL,2.26,0.15,0.11,3.91
+QL,2.29,-2.55,5.71,1.55

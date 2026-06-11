@@ -5,7 +5,7 @@ Simulación completa de los cuatro controladores en NumPy puro (sin frameworks d
 CONTROLADORES (4 métodos):
   PID      : PID discreto con feedforward y anti-windup por canal.
   Fuzzy    : Mamdani — MFs triangulares/trapezoidales, AND=mín, defuzz WA singletons.
-  DL       : Red profunda (4 capas ocultas), Adam + cosine LR, NumPy vectorizado.
+  DL       : Red profunda (4 capas ocultas), Adam + planificacion coseno de LR, NumPy vectorizado.
   Q-Learn  : Q-learning tabular ε-greedy, TD(0), entrenado desde cero en cada ejecución.
 
 FASES:
@@ -132,7 +132,7 @@ def pid_step(e: float, st: PIDState, kp: float, ki: float, kd: float,
     de  = e - st.prev_e
     raw = ff + kp * e + ki * st.integral + kd * de
     u   = float(np.clip(raw, u_min, u_max))
-    # anti-windup: sólo integrar si el actuador no está saturado en la dirección del error
+    # anti-windup: solo integrar si el actuador no está saturado en la dirección del error
     if not (raw > u_max and e > 0) and not (raw < u_min and e < 0):
         st.integral = float(np.clip(st.integral + e, -aw_lim, aw_lim))
     st.prev_e = e
@@ -155,7 +155,7 @@ def _trap(x: float, a, b, c, d) -> float:
     return float(np.clip((x - a) / (b - a) if x < b else (d - x) / (d - c), 0.0, 1.0))
 
 
-# Funciones de pertenencia del error e ∈ [−1.5, 1.5] — 7 conjuntos (densos cerca de cero)
+# Funciones de membresía del error e ∈ [−1.5, 1.5] — 7 conjuntos (densos cerca de cero)
 _MF_E = {
     "NL": ("trap", -1.5, -1.5, -0.70, -0.40),
     "NM": ("tri",  -0.60, -0.35, -0.12),
@@ -167,7 +167,7 @@ _MF_E = {
 }
 _LVL_E = {"NL": -3, "NM": -2, "NS": -1, "ZE": 0, "PS": 1, "PM": 2, "PL": 3}
 
-# Funciones de pertenencia de la derivada Δe ∈ [−0.5, 0.5] — 5 conjuntos
+# Funciones de membresía de la derivada Δe ∈ [−0.5, 0.5] — 5 conjuntos
 _MF_DE = {
     "NB": ("trap", -0.50, -0.50, -0.22, -0.10),
     "NS": ("tri",  -0.18, -0.08,  0.00),
@@ -194,7 +194,7 @@ def _mf_deriv(de: float) -> dict:
     return {k: _mf(de, v) for k, v in _MF_DE.items()}
 
 
-# Funciones de pertenencia de la perturbación d ∈ [0, 1]
+# Funciones de membresía de la perturbación d ∈ [0, 1]
 def _mf_dist(d: float) -> dict:
     return {
         "NO":  _trap(d, 0.0, 0.0,  0.25, 0.55),
@@ -250,7 +250,7 @@ def fuzzy_split(balance: float) -> float:
 class DeepNet:
     """Red completamente conectada: tanh ocultas, sigmoide salida.
 
-    Optimizador: Adam (β1=0.9, β2=0.999) con cosine LR annealing.
+    Optimizador: Adam (β1=0.9, β2=0.999) con planificacion coseno de LR.
     Init: He/Kaiming (escala = sqrt(2/fan_in)).
     Backprop: mini-batch vectorizado con operaciones matriciales (sin bucles por muestra).
     """
@@ -373,7 +373,7 @@ def train_dl_servo_direct(
     2. Ejecutar la simulación completa con la red actual → y(k), u(k), sigma(k).
     3. Calcular el IAE + penalización de suavidad.
     4. Retropropagar el gradiente a través de la planta (método adjunto) y
-       luego a través de la red (backprop estándar).
+       luego a través de la red (retropropagación estándar).
     5. Actualizar pesos con Adam.
 
     El gradiente del IAE respecto a u(k) se calcula como:
@@ -522,7 +522,7 @@ def train_dl_aware_direct(
     Adjunto (por estera i):
         λ_i(T+1) = 0
         λ_i(k)   = sign(n_i(k+1) - n*)/T + A_i · λ_i(k+1)
-        A_i = 1 en régimen lineal, 0 si n_i(k+1) saturó en 0 o ET_CAP
+        A_i = 1 en régimen lineal, 0 si n_i(k+1) saturó en 0
 
     Gradientes respecto a salidas de la red:
         dL/du_i(k)     = -ET_EG·(1-loss_i)·λ_i(k+1)   [si outflow no saturado]
@@ -617,8 +617,8 @@ def train_dl_aware_direct(
                 adm_k = adms[k]; sp_k = spls[k]; uk_k = us[k]
 
                 # A_i: factor de propagación del co-estado
-                sat   = (n_kp1 <= 1e-4) | (n_kp1 >= ET_CAP - 1e-4)
-                A_vec = np.where(sat, 0.0, 1.0)
+                sat_low = (n_kp1 <= 1e-4)
+                A_vec = np.where(sat_low, 0.0, 1.0)
 
                 # Actualizar co-estado: lam pasa de λ(k+2) a λ(k+1)
                 dL_dn = np.sign(n_kp1 - ET_TARGET) / T
@@ -631,10 +631,10 @@ def train_dl_aware_direct(
                 free_drain  = commanded < outflow_cap - 1e-6
 
                 # dL/du_i(k) = -ET_EG*(1-loss_i)*λ_i(k+1) si hay margen
-                dL_du = np.where(free_drain & ~sat, -ET_EG * (1.0 - ls_k) * lam, 0.0)
+                dL_du = np.where(free_drain & ~sat_low, -ET_EG * (1.0 - ls_k) * lam, 0.0)
 
                 # dL/d(split_E1)(k)
-                if not (sat[0] or sat[1]):
+                if not (sat_low[0] or sat_low[1]):
                     dL_dspl = float((lam[0] - lam[1]) * dm_k * adm_k)
                 else:
                     dL_dspl = 0.0
@@ -772,7 +772,8 @@ def _et_step(n_prev: np.ndarray, u: np.ndarray, split: np.ndarray,
     feed    = demand * admission * split
     commanded = ET_EG * u * (1.0 - loss)
     outflow = np.minimum(commanded, n_prev + feed)
-    n_next  = np.clip(n_prev + feed - outflow, 0.0, ET_CAP)
+    # No upper clip: capacity violations must remain visible to the metrics.
+    n_next  = np.maximum(0.0, n_prev + feed - outflow)
     return n_next, outflow
 
 
@@ -1211,7 +1212,7 @@ def plot_fuzzy_memberships():
     ax.set_ylabel("Velocidad normalizada"); ax.set_title("Velocidad de salida por nivel de error ($\\Delta e=0$)")
     ax.legend(fontsize=8); ax.set_ylim(0, 1.05)
 
-    fig.suptitle("Funciones de pertenencia — Controlador Difuso Mamdani", fontsize=10, fontweight="bold")
+    fig.suptitle("Funciones de membresía — Controlador Difuso Mamdani", fontsize=10, fontweight="bold")
     fig.tight_layout(); _sv(fig, "fig_fuzzy_mf.png")
 
 
@@ -1275,7 +1276,7 @@ def plot_servo_response(sr: dict):
     ay.axvline(SV_STEP_K, color="gray", lw=0.7, ls=":")
     ay.set_ylabel("Salida $y(k)$"); ay.set_ylim(-0.08, 1.28)
     ay.legend(fontsize=8, ncol=3, loc="lower right")
-    ay.set_title("Fase 1 — Respuesta servoregulador (escalón + perturbación de carga)")
+    ay.set_title("Fase 1 — Respuesta servorregulador (escalón + perturbación de carga)")
     au.axvspan(SV_D_START, SV_D_STOP, color="#ef4444", alpha=0.10)
     au.set_ylabel("Mando $u(k)$"); au.set_xlabel("Muestra $k$"); au.set_ylim(-0.03, 1.08)
     au.legend(fontsize=8, ncol=3)
@@ -1291,12 +1292,14 @@ def plot_robustez_rampa(sr_step: dict, sr_ramp: dict):
     for ax, m in zip(axes.flat, METHODS):
         iae_s = servo_metrics(sr_step[m])["IAE"]
         iae_r = servo_metrics(sr_ramp[m])["IAE"]
-        deg   = 100 * (iae_r / iae_s - 1) if iae_s > 0 else 0.0
+        iae_s_show = round(iae_s, 2)
+        iae_r_show = round(iae_r, 2)
+        deg = 100 * (iae_r_show / iae_s_show - 1) if iae_s_show > 0 else 0.0
 
         ax.plot(t, sr_step[m]["y"], MS[m], color=MC[m], lw=1.8,
-                label=f"Escalón  IAE={iae_s:.2f}")
+                label=f"Escalón  IAE={iae_s_show:.2f}")
         ax.plot(t, sr_ramp[m]["y"], "--", color=MC[m], lw=1.4, alpha=0.80,
-                label=f"Rampa    IAE={iae_r:.2f} ({deg:+.1f}\\%)")
+                label=f"Rampa    IAE={iae_r_show:.2f} ({deg:+.1f}\\%)")
         ax.plot(t, sr_step[m]["ref"], ":k", lw=1.0)
 
         # Sombrear la zona de rampa (rampa + sostenimiento + bajada)
@@ -1439,7 +1442,7 @@ def plot_ql_online(offline_iae: float, df_online: pd.DataFrame):
 
 def _fmt(v) -> str:
     if isinstance(v, (int, np.integer)):   return str(int(v))
-    if isinstance(v, (float, np.floating)): return f"{float(v):.3g}"
+    if isinstance(v, (float, np.floating)): return f"{float(v):.4g}"
     return str(v).replace("_", r"\_").replace("%", r"\%")
 
 
@@ -1469,7 +1472,7 @@ def write_tables(sr, ar, h_dl_s, h_dl_a, ql_h_s, ql_h_a,
           ("Ts", "$t_s$"), ("Rec", "Recup."),
           ("Energia", "Energía"), ("Var_u", "$\\sum|\\Delta u|$"), ("Umax", "$u_{max}$")],
          TABLE_DIR / "servo_metrics.tex",
-         "Indicadores Fase~1 (servoregulador, 4 métodos).", "tab:servo_metrics")
+         "Indicadores Fase~1 (servorregulador, 4 métodos).", "tab:servo_metrics")
     pd.DataFrame(rows_s).to_csv(TABLE_DIR / "servo_metrics.csv", index=False)
 
     # ── Métricas aware ────────────────────────────────────────────────────────
@@ -1477,7 +1480,7 @@ def write_tables(sr, ar, h_dl_s, h_dl_a, ql_h_s, ql_h_a,
     _tex(rows_a,
          [("Metodo", "Método"), ("IAE", "IAE"), ("IAE_dist", "IAE pert."),
           ("Ocup_max", "Ocup. máx."), ("Margen", "Margen"), ("T_riesgo", "T. alarma"),
-          ("Viol", "Viol."), ("Prod", "Prod."), ("Energia", "Energía"), ("Desbal", "Desbal.")],
+          ("Viol", "Viol."), ("Rec", "Rec."), ("Prod", "Prod."), ("Energia", "Energía"), ("Desbal", "Desbal.")],
          TABLE_DIR / "aware_metrics.tex",
          "Indicadores Fase~2 (coordinación R2ET, 4 métodos).", "tab:aware_metrics")
     pd.DataFrame(rows_a).to_csv(TABLE_DIR / "aware_metrics.csv", index=False)
@@ -1489,18 +1492,17 @@ def write_tables(sr, ar, h_dl_s, h_dl_a, ql_h_s, ql_h_a,
         me = aware_metrics(ar[m])
         rows_imp.append({
             "Metodo":    m,
-            "DIAE_pct":  round(100 * (base["IAE"] - me["IAE"]) / base["IAE"], 1),
+            "IAE_rel":   round(me["IAE"] / max(base["IAE"], 1e-9), 2),
             "DProd":     round(me["Prod"] - base["Prod"], 2),
-            "DEnerg":    round(me["Energia"] - base["Energia"], 2),
-            "DDesbal":   round(100 * (base["Desbal"] - me["Desbal"]) / max(base["Desbal"], 1e-6), 1),
+            "DEnerg":    round(base["Energia"] - me["Energia"], 2),
+            "Desbal_rel": round(me["Desbal"] / max(base["Desbal"], 1e-6), 2),
         })
     _tex(rows_imp,
-         [("Metodo", "Método"), ("DIAE_pct", "$\\Delta$IAE \\%"),
-          ("DProd", "$\\Delta$Prod."), ("DEnerg", "$\\Delta$Energ."), ("DDesbal", "$\\Delta$Desbal. \\%")],
+         [("Metodo", "Método"), ("IAE_rel", "IAE/PID"),
+          ("DProd", "$\\Delta$Prod."), ("DEnerg", "Ahorro energ."), ("Desbal_rel", "Desbal./PID")],
          TABLE_DIR / "aware_improvement.tex",
-         "Variación de cada método inteligente respecto al PID-Aware. "
-         "Convención: signo positivo = mejor que el PID (menor IAE/desbalance, mayor productividad); "
-         "negativo = peor. $\\Delta$Prod./$\\Delta$Energ. en unidades absolutas.",
+         "Comparación directa de cada método inteligente respecto al PID-Aware. "
+         "Valores de IAE y desbalance como razón frente al PID; productividad y energía como diferencia absoluta.",
          "tab:aware_improvement")
     pd.DataFrame(rows_imp).to_csv(TABLE_DIR / "aware_improvement.csv", index=False)
 
@@ -1582,18 +1584,18 @@ def write_online_ql_table(offline_iae: float, df_online: pd.DataFrame):
     rows = [
         {"Fase": "Offline (línea base)", "Episodios": 0,
          "IAE_medio": round(offline_iae, 3), "Mejora_pct": 0.0},
-        {"Fase": "Q1 online (ep. 1-12)", "Episodios": nq // 4,
+        {"Fase": "Primeros \\emph{online} (ep. 1-12)", "Episodios": nq // 4,
          "IAE_medio": round(q1, 3),
          "Mejora_pct": round(100 * (offline_iae - q1) / offline_iae, 1)},
-        {"Fase": f"Q4 online (ep. {3*nq//4+1}-{nq})", "Episodios": nq - 3 * nq // 4,
+        {"Fase": f"Últimos \\emph{{online}} (ep. {3*nq//4+1}-{nq})", "Episodios": nq - 3 * nq // 4,
          "IAE_medio": round(q4, 3),
          "Mejora_pct": round(100 * (offline_iae - q4) / offline_iae, 1)},
     ]
     _tex(rows,
-         [("Fase", "Fase"), ("Episodios", "Ep."),
+         [("Fase", "Fase"), ("Episodios", "N.º episodios"),
           ("IAE_medio", "IAE medio"), ("Mejora_pct", "Mejora \\%")],
          TABLE_DIR / "ql_online_summary.tex",
-         "Q-Learning online: IAE por cuartil de episodios.", "tab:ql_online")
+         "Q-Learning \\emph{online}: línea base, primeros 12 y últimos 13 episodios.", "tab:ql_online")
     pd.DataFrame(rows).to_csv(TABLE_DIR / "ql_online_summary.csv", index=False)
 
 

@@ -1,13 +1,17 @@
-\chapter[4.3.a--b Indicadores, pruebas y resultados]{4.3.a--b Indicadores de desempeño, pruebas y análisis de resultados}
+\chapter[Indicadores, pruebas y resultados]{Indicadores de desempeño, pruebas y análisis de resultados}
 \label{ch:pruebas}
 
-\section{4.3.a Indicadores de desempeño}
+\section{Indicadores de desempeño}
 
-Los indicadores expresan el desempeño de los cuatro métodos en una misma escala cuantitativa \cite{martinRodellarControlAdaptativo}.
+Correspondencia con la guía: apartados 4.3.a y 4.3.b. Los indicadores expresan el desempeño de los cuatro métodos en una misma escala cuantitativa \cite{martinRodellarControlAdaptativo}.
 
-\subsection*{Indicadores Fase~1: Servoregulador}
+\subsection*{Indicadores Fase~1: Servorregulador}
 
-\begin{longtable}{@{}P{0.22\linewidth}P{0.42\linewidth}P{0.24\linewidth}@{}}
+\begin{table}[H]
+\centering
+\caption{Indicadores de desempeño para la Fase~1.}
+\label{tab:indicadores_servo}
+\begin{tabular}{@{}P{0.22\linewidth}P{0.42\linewidth}P{0.24\linewidth}@{}}
 \toprule
 Indicador & Definición & Objetivo \\ \midrule
 IAE servo & $\text{IAE} = \sum_{k=10}^{150}|r(k)-y(k)|$ & Minimizar.\\
@@ -17,15 +21,21 @@ Tiempo de recuperación & Muestras para $|e| \leq 2.5\%$ tras fin perturbación.
 Energía servo & $E = \sum_{k=10}^{150}u(k)$ & No crecer sin mejora de IAE.\\
 Variación de mando & $\sum_{k}|\Delta u(k)|$ & Minimizar (suavidad).\\
 \bottomrule
-\end{longtable}
+\end{tabular}
+\end{table}
 
 \subsection*{Indicadores Fase~2: Coordinación aware R2ET}
 
-\begin{longtable}{@{}P{0.24\linewidth}P{0.40\linewidth}P{0.24\linewidth}@{}}
+\begin{table}[H]
+\centering
+\caption{Indicadores de desempeño para la Fase~2.}
+\label{tab:indicadores_aware}
+\begin{tabular}{@{}P{0.24\linewidth}P{0.40\linewidth}P{0.24\linewidth}@{}}
 \toprule
 Indicador & Definición & Objetivo \\ \midrule
 IAE aware & $\sum_{k}(|n_1-n^*|+|n_2-n^*|)$ & Minimizar.\\
 IAE durante atasco & Mismo, solo en $k=95$--$118$. & Minimizar.\\
+Recuperación post-atasco & Muestras tras $k=118$ hasta salir de zona de riesgo. & $<15$ muestras.\\
 Ocupación máxima & $\max_{k,i}n_i(k)$ & $< 3$ (duro) y $< 2.7$ (preferible).\\
 Margen de seguridad & $N_{max} - \max_{k,i}n_i(k)$ & Maximizar.\\
 Tiempo en alarma & Muestras con $n_i > 2.7$. & Cero.\\
@@ -34,15 +44,16 @@ Productividad total & $\sum_{k}(y_{out,1}+y_{out,2})$ & Maximizar.\\
 Energía aware & $\sum_{k}(u_1+u_2)$ & Equilibrar con productividad.\\
 Desbalance medio & $\bar{b} = \overline{|n_1-n_2|}$ & $< 0.5$ piezas.\\
 \bottomrule
-\end{longtable}
+\end{tabular}
+\end{table}
 
 \section{Escenarios de simulación}
 
-Fase~1 (servo): Planta $y(k+1)=0.92y+0.08u-0.024d$ (discretización ZOH de $G_p(s)$). Referencia: escalón al nivel de operación $r=0.6$ en $k=10$. Perturbación de carga ($d=1$) entre $k=85$ y $k=110$. Total: 150 muestras.
+Fase~1 (servo): Planta $y(k+1)=0.92y+0.08u-0.024d$ (modelo reducido de primer orden, discretizado por ZOH a partir de la dinámica dominante de $G_p(s)$). Referencia: escalón al nivel de operación $r=0.6$ en $k=10$. Perturbación de carga ($d=1$) entre $k=85$ y $k=110$. Total: 150 muestras.
 
 Fase~2 (aware R2ET): Caudal base $\lambda=0.42$; pulso $+0.35$ en $k=55$--$82$; atasco parcial (E1: $-35\%$, E2: $-17.5\%$) en $k=95$--$118$; 160 muestras. Condición inicial: $n_1(0)=n_2(0)=1.25$.
 
-\section{Resultados Fase~1: Servoregulador}
+\section{Resultados Fase~1: Servorregulador}
 
 \input{artifacts/tables/servo_metrics.tex}
 
@@ -52,13 +63,15 @@ Fase~2 (aware R2ET): Caudal base $\lambda=0.42$; pulso $+0.35$ en $k=55$--$82$; 
 
 \subsection*{Análisis técnico Fase~1}
 
-Q-Learning. IAE~$=1.80$ (el menor de los cuatro), $M_p=0\%$, $t_s=10$~muestras, Rec=0~ciclos: el seguimiento más ajustado y la recuperación instantánea ante la perturbación. La contrapartida es el mando: $u_{max}=1.0$ (satura) y variación acumulada $\sum|\Delta u|=7.10$, la más alta con diferencia, por el comportamiento bang-bang de las 8~acciones discretas (no hay acción intermedia suficientemente suave cerca de la referencia).
+El Q-Learning obtiene IAE~$=1.80$, el menor de los cuatro, con $M_p=0\%$, $t_s=10$~muestras y recuperación inmediata ante la perturbación. El coste aparece en el mando: $u_{max}=1.0$ (satura) y variación acumulada $\sum|\Delta u|=7.10$, la más alta del grupo, por el comportamiento bang-bang de las 8~acciones discretas (no hay acción intermedia suficientemente suave cerca de la referencia).
 
-Deep Learning. IAE~$=1.90$ (segundo, $2\times$ menor que el PID), $M_p=0\%$, $t_s=10$~muestras, Rec=3~ciclos. Ofrece el mejor compromiso: seguimiento casi tan bueno como el QL, el mando más suave de los cuatro ($\sum|\Delta u|=1.65$) y sin saturar ($u_{max}=0.863$). La red se entrenó por optimización directa sobre la planta mediante el método adjunto (sin controlador externo de referencia), optimizando IAE más penalización de suavidad sobre 800~épocas de 32~escenarios (ecuaciones~\ref{eq:adjoint}--\ref{eq:grad_u}).
+La red de Deep Learning queda segunda, con IAE~$=1.90$ ($2\times$ menor que el PID), $M_p=0\%$, $t_s=10$~muestras y Rec=3~ciclos. La combinación de seguimiento bajo, mando suave ($\sum|\Delta u|=1.65$) y ausencia de saturación ($u_{max}=0.863$) la deja como la alternativa más equilibrada en el lazo servo. La red se entrenó \emph{offline} sobre el gemelo digital, optimizando IAE más penalización de suavidad sobre 800~épocas de 32~escenarios mediante retropropagación a través de la simulación discreta (ecuaciones~\ref{eq:adjoint}--\ref{eq:grad_u}).
 
-Fuzzy. Menor energía acumulada ($90.1$~unidades) y actuador conservador ($u_{max}=0.816$); su variación de mando ($\sum|\Delta u|=1.85$) es baja, sólo por encima de la del DL. La base de 35~reglas mejora la respuesta respecto a la versión de 15, pero el control sin acción integral sigue siendo el más lento: $t_s=19$~muestras, Rec=12~ciclos y el mayor IAE ($5.97$).
+El controlador difuso consume menos energía acumulada ($90.1$~unidades) y mantiene el actuador en una zona conservadora ($u_{max}=0.816$). Su variación de mando ($\sum|\Delta u|=1.85$) es baja, solo por encima de la del DL. La base ampliada de reglas mejora la respuesta, pero el control sin acción integral sigue siendo el más lento: $t_s=19$~muestras, Rec=12~ciclos y el mayor IAE ($5.97$).
 
-PID. IAE~$=3.89$ tras el reajuste de ganancias ($K_p=4.0$), con establecimiento en 16~muestras y recuperación instantánea ($0$~ciclos) gracias a la acción integral. Supera al difuso en IAE; las políticas de aprendizaje (DL y QL) siguen por delante.
+El PID alcanza IAE~$=3.89$ tras la resintonización de ganancias ($K_p=4.0$), con establecimiento en 16~muestras y recuperación instantánea ($0$~ciclos) gracias a la acción integral. Supera al difuso en IAE; las políticas de aprendizaje (DL y QL) siguen por delante.
+
+El error estacionario se verifica sobre las últimas 20 muestras del ensayo, después de retirada la perturbación: PID $1.61\%$, Fuzzy $0.17\%$, DL $0.07\%$ y Q-Learning $0.01\%$ respecto a $r=0.6$. Los cuatro cumplen el criterio RF-07 en la planta servo.
 
 \section{Resultados Fase~2: Coordinación aware R2ET}
 
@@ -66,37 +79,37 @@ PID. IAE~$=3.89$ tras el reajuste de ganancias ($K_p=4.0$), con establecimiento 
 
 \input{artifacts/tables/aware_improvement.tex}
 
-En la Tabla~\ref{tab:aware_improvement} el signo positivo indica ventaja respecto al PID-Aware. Los
-$\Delta$IAE son negativos porque el PID-Aware retuneado es el mejor en IAE total (su acción integral
-elimina el error estacionario); las políticas de aprendizaje aportan en otros ejes: el DL logra el mayor
-margen de seguridad y la mayor productividad, y el Q-Learning el menor consumo energético y la mayor
-robustez (Sección~\ref{sec:robustez_severa}).
+La Tabla~\ref{tab:aware_improvement} evita porcentajes de signo ambiguo y compara directamente cada alternativa con el PID-Aware. El PID-Aware mantiene el menor IAE total. Las políticas de aprendizaje se justifican por otras métricas: el DL logra el mayor margen de seguridad y la mayor productividad, y el Q-Learning el menor consumo energético y la mayor robustez (Sección~\ref{sec:robustez_severa}).
 
 \artifactfigure{figures/plots/fig_aware_occupancy.png}{0.95}{Fase~2: Ocupación máxima entre las dos esteras R2ET a lo largo del tiempo. Ningún método supera la capacidad de 3 piezas ni el umbral de alarma (2.7).}
 
 \artifactfigure{figures/plots/fig_aware_zoom.png}{0.88}{Fase~2: Zoom durante el atasco parcial ($k=95$--$118$): todos los métodos mantienen la ocupación máxima por debajo del umbral de alarma.}
 
-\artifactfigure{figures/plots/fig_aware_control.png}{0.90}{Fase~2: Velocidad normalizada de control para E1 (arriba) y E2 (abajo). La línea discontinua horizontal marca $u_{ss} \approx 0.46$.}
+\artifactfigure{figures/plots/fig_aware_control.png}{0.90}{Fase~2: Velocidad normalizada de control para E1 (arriba) y E2 (abajo). La línea discontinua horizontal marca $u_{ss} \approx 0.46$. El mando oscilante del DL y el QL se analiza y mitiga en la mejora de suavizado.}
 
 \artifactfigure{figures/plots/fig_aware_split.png}{0.80}{Fase~2: Fracción de alimentación del robot hacia E1. Valores $< 0.5$ indican que el robot prioriza E2; valores $> 0.5$ priorizan E1.}
 
-\artifactfigure{figures/plots/fig_pareto.png}{0.68}{Fase~2: Frontera práctica error–energía: cada punto representa un método en el espacio (energía, IAE). Métodos en la esquina inferior-izquierda son Pareto-óptimos.}
+\artifactfigure{figures/plots/fig_pareto.png}{0.68}{Fase~2: Frontera práctica error--energía: cada punto representa un método en el espacio (energía, IAE). Métodos en la esquina inferior izquierda son Pareto-óptimos.}
 
 \subsection*{Análisis técnico Fase~2}
 
-PID-Aware. IAE~$=11.41$, el menor de los cuatro, e IAE durante el atasco también el menor (1.07~piezas). Tras el reajuste de ganancias ($K_p=1.3$, $K_i=0.18$), la integral lleva $n_i$ a $n^*$ con error mínimo y el menor desbalance (0.011~piezas). La ocupación máxima se queda en 1.74~piezas.
+El PID-Aware registra IAE~$=11.41$, el menor de los cuatro, e IAE durante el atasco de 1.07~piezas, también el menor. Tras la resintonización de ganancias ($K_p=1.3$, $K_i=0.18$), la integral lleva $n_i$ a $n^*$ con error mínimo y el menor desbalance (0.011~piezas). La ocupación máxima se queda en 1.74~piezas.
 
-DL-Aware. IAE~$=22.14$ (segundo). La red profunda ($8\!\to\!96\!\to\!\dots\!\to\!3$, 1200~épocas) mantiene la ocupación más baja (1.57~piezas) y, por tanto, el mayor margen de seguridad (1.43~piezas), además de la mayor productividad (74.93~piezas). Su IAE durante el atasco (1.29) es el segundo menor. El desbalance (0.03~piezas) es el mayor de los cuatro, aunque muy por debajo del objetivo ($<0.5$).
+La red DL-Aware queda en IAE~$=25.83$ (segundo, apenas por debajo del Q-Learning). Con la arquitectura $8\!\to\!96\!\to\!\dots\!\to\!3$ y 1200~épocas, mantiene una ocupación máxima baja (1.71~piezas) y, por tanto, el mayor margen de seguridad (1.29~piezas), además de la mayor productividad (74.82~piezas). Su IAE durante el atasco sube a 4.27~piezas, por encima de PID y Fuzzy pero todavía por debajo de Q-Learning. El desbalance (0.043~piezas) es el mayor de los cuatro, aunque muy por debajo del objetivo ($<0.5$).
 
-Q-Learning-Aware. IAE~$=25.75$ (tercero) con el menor consumo energético (163.52) y el comportamiento más robusto ante el escenario severo (Sección~\ref{sec:robustez_severa}). Su IAE durante el atasco (6.12) es el mayor: la codificación binaria de $d$ produce una reacción discreta más tardía. La política opera por debajo de $n^*$ sin gastar velocidad de más.
+El Q-Learning-Aware obtiene IAE~$=26.13$ (tercero), con el menor consumo energético (163.6) y el comportamiento más robusto ante el escenario severo (Sección~\ref{sec:robustez_severa}). Su IAE durante el atasco (6.70) es el mayor por la codificación binaria de $d$ (véase la Sección~\ref{sec:robustez_rampa}). La política opera por debajo de $n^*$ sin gastar velocidad de más.
 
-Fuzzy-Aware. IAE~$=37.21$, el mayor de los cuatro, pero con IAE durante el atasco bajo (1.82, tercero) y desbalance mínimo (0.012) por las reglas de reparto. La base de 35 reglas reduce el IAE respecto a la versión de 15~reglas (de 56.3 a 37.2); aun así, al carecer de acción integral, no alcanza a PID, DL ni QL en IAE total.
+El Fuzzy-Aware termina con IAE~$=37.21$, el mayor de los cuatro, pero conserva un IAE de atasco bajo (1.82, tercero) y desbalance mínimo (0.012) por las reglas de reparto. La base de 35 reglas reduce el IAE respecto a la versión de 15~reglas (de 56.3 a 37.2); aun así, al carecer de acción integral, no alcanza a PID, DL ni QL en IAE total.
 
-Los cuatro métodos mantienen cero violaciones de capacidad y cero muestras en zona de alarma. El mayor margen de seguridad corresponde al DL (1.43~piezas); el más ajustado al difuso (0.80~piezas). La capa de supervisión de capacidad cumple su función con independencia del controlador primario activo.
+Los cuatro métodos mantienen cero violaciones de capacidad, cero muestras en zona de alarma y recuperación post-atasco de 0~muestras para salir de la zona de riesgo. Como la planta no se recorta por arriba, este resultado corresponde a la ocupación simulada y no a una saturación numérica. El mayor margen de seguridad corresponde al DL (1.29~piezas); el más ajustado al difuso (0.80~piezas). La capa de supervisión de capacidad cumple su función para los cuatro métodos.
+
+La ocupación mínima observada en el episodio nominal es de $1.25$~piezas para los cuatro métodos, por encima del umbral de no vaciado RF-03 ($0.2$~piezas). Las productividades de PID y Fuzzy coinciden porque, con admisión $a=1$ durante todo el episodio nominal, la salida acumulada queda fijada por la entrada acumulada menos la variación de inventario; ambos métodos terminan con ocupaciones finales prácticamente iguales. El DL difiere por su inventario final menor y el Q-Learning por sus acciones con recorte de admisión ($a<1$), que reducen la entrada total.
+
+El error estacionario de Fase~2 se mide sobre las últimas 20 muestras. La estrategia seleccionada para implantación (Fuzzy-Aware con supervisor) converge a error nulo dentro de la precisión numérica, igual que PID-Aware; Q-Learning-Aware queda en $1.88\%$ y DL-Aware conserva un sesgo residual de $3.97\%$. Este sesgo refuerza la recomendación de usar DL y QL inicialmente en modo sombra, no como primer controlador de planta.
 
 \subsection*{Mejora propuesta: suavizado del mando}
 
-Las señales de control por estera de la Fase~2 (velocidad $u_i$) revelan un mando oscilante (\emph{chattering}) en el DL y el Q-Learning: el DL porque el método adjunto minimiza el IAE sin penalizar apenas el cambio de mando, y el Q-Learning porque sus acciones son discretas (bang-bang). Como mejora se reentrena cada método pidiéndole además minimizar la variación del mando $|\Delta u|$:
+Las señales de control por estera de la Fase~2 (velocidad $u_i$) revelan un mando oscilante (\emph{chattering}) en el DL y el Q-Learning: el DL porque la pérdida base prioriza el IAE sobre el cambio de mando, y el Q-Learning porque sus acciones son discretas (bang-bang). Como mejora se reentrena cada método pidiéndole además minimizar la variación del mando $|\Delta u|$:
 \begin{itemize}
   \item Q-Learning: se añade a la recompensa el término $-w\,|\Delta u|$ (con $w=4$), que penaliza el cambio de velocidad entre pasos consecutivos.
   \item Deep Learning: se refuerza la penalización de suavidad de la pérdida ($\lambda_u=0.4$) y, en el despliegue, se aplica un limitador de pendiente ($|\Delta u|\leq 0.06$ por muestra), técnica industrial estándar para el actuador.
@@ -104,29 +117,32 @@ Las señales de control por estera de la Fase~2 (velocidad $u_i$) revelan un man
 
 \artifactfigure{figures/plots/fig_smoothing.png}{0.98}{Mejora del mando (velocidad de E1): señal original (oscilante) frente a la versión suavizada que penaliza $|\Delta u|$, para Deep Learning (izq.) y Q-Learning (der.). $\text{Var}_u=\sum|\Delta u|$ en la leyenda.}
 
-\begin{center}
+\begin{table}[H]
+\centering
+\caption{Efecto del suavizado del mando en DL y Q-Learning.}
+\label{tab:suavizado_mando}
 \small
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
 Método & IAE orig. & IAE suave & $\sum|\Delta u|$ orig. & $\sum|\Delta u|$ suave \\ \midrule
-Deep Learning & 22.1 & 38.5 & 148 & \textbf{15} \\
-Q-Learning    & 25.7 & 40.0 & \phantom{0}37 & \textbf{21} \\
+Deep Learning & 25.8 & 36.4 & 134 & \textbf{14.5} \\
+Q-Learning    & 26.1 & 49.7 & \phantom{0}35.9 & \textbf{15.6} \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
-El suavizado reduce la variación total del mando $\sum|\Delta u|$ de 148 a 15 en el DL ($-90\%$) y de 37 a 21 en el Q-Learning ($-44\%$), manteniendo cero violaciones, a costa de un IAE mayor (DL $22.1\to38.5$; QL $25.7\to40.0$). Es el compromiso clásico suavidad–seguimiento: para un actuador con restricción de velocidad de cambio, esta versión suave es preferible aunque el error de seguimiento crezca. El bang-bang del Q-Learning es intrínseco a sus acciones discretas, por lo que el límite alcanzable es mayor que en el DL, cuya salida continua admite un suavizado casi total.
+El suavizado reduce la variación total del mando $\sum|\Delta u|$ de 134 a 14.5 en el DL ($-89\%$) y de 35.9 a 15.6 en el Q-Learning ($-57\%$), manteniendo cero violaciones, a costa de un IAE mayor (DL $25.8\to36.4$; QL $26.1\to49.7$). Es el compromiso clásico suavidad--seguimiento: para un actuador con restricción de velocidad de cambio, esta versión suave es preferible aunque el error de seguimiento crezca. El bang-bang del Q-Learning es intrínseco a sus acciones discretas; por eso su suavizado exige sacrificar más IAE que en el DL, cuya salida continua admite un limitador de pendiente más eficaz.
 
 \section{Q-Learning con actualización continua durante el despliegue}
 \label{sec:ql_online}
 
-Tras el entrenamiento offline (3000 episodios), la tabla Q se despliega en el escenario estándar con $\varepsilon=0.08$ y la actualización TD continua habilitada (50 episodios adicionales):
+Tras el entrenamiento \emph{offline} (3000 episodios), la tabla Q se despliega en el escenario estándar con $\varepsilon=0.08$ y la actualización TD continua habilitada (50 episodios adicionales):
 
 \input{artifacts/tables/ql_online_summary.tex}
 
-\artifactfigure{figures/plots/fig_ql_online.png}{0.85}{Q-Learning online: IAE por episodio (verde claro) y tendencia suavizada (verde oscuro) frente a la línea base offline (gris discontinua). La exploración con $\varepsilon=0.08$ degrada la política offline, ya muy ajustada.}
+\artifactfigure{figures/plots/fig_ql_online.png}{0.85}{Q-Learning \emph{online}: IAE por episodio (verde claro) y tendencia suavizada (verde oscuro) frente a la línea base \emph{offline} (gris discontinua). La exploración con $\varepsilon=0.08$ degrada la política \emph{offline}, ya muy ajustada.}
 
-El IAE sube de la línea base offline (25.75) a 34.2 en el primer cuartil online y a 40.5 en el cuarto: con una política offline ya muy buena, la exploración $\varepsilon$-greedy ($\varepsilon=0.08$) introduce acciones subóptimas que \emph{empeoran} el desempeño en lugar de mejorarlo. La conclusión práctica es clara: esta tabla Q debe desplegarse en modo greedy ($\varepsilon=0$); la actualización continua solo se justifica si el proceso deriva con el tiempo, en cuyo caso conviene una exploración mucho menor ($\varepsilon\!\ll\!0.08$) y limitada a las regiones con deriva detectada.
+El IAE sube de la línea base \emph{offline} (26.13) a 41.1 en los primeros 12 episodios \emph{online} y a 42.3 en los últimos 13: con una política \emph{offline} ya ajustada, la exploración $\varepsilon$-greedy ($\varepsilon=0.08$) introduce acciones subóptimas que \emph{empeoran} el desempeño en lugar de mejorarlo. En la práctica, esta tabla Q debe desplegarse en modo greedy ($\varepsilon=0$); la actualización continua solo se justifica si el proceso deriva con el tiempo, en cuyo caso conviene una exploración mucho menor ($\varepsilon\!\ll\!0.08$) y limitada a las regiones con deriva detectada.
 
 \section{Control clásico vs. control inteligente: comparación antes y después}
 
@@ -134,11 +150,11 @@ La línea base (\emph{antes}) es la alternativa industrial previa a este trabajo
 
 Fase~1 (servo). El PID clásico obtiene IAE~$=3.89$; los métodos de aprendizaje lo mejoran hasta IAE~$=1.80$ (Q-Learning) y $1.90$ (DL, además con el mando más suave y sin saturar). El difuso de 35~reglas queda en $5.97$. Es decir, la capa inteligente reduce el error de seguimiento hasta un factor $2\times$ respecto al PID base.
 
-Fase~2 (coordinación). La Tabla~\ref{tab:aware_baseline} cuantifica el antes/después. En condiciones nominales la diferencia es modesta: la celda está sobredimensionada y el PID base ya se mantiene seguro (ocupación máxima 1.74~piezas, cero alarmas), con IAE solo $\sim14\%$ peor que el supervisado (13.0 frente a 11.4). El valor del supervisor aparece bajo estrés: en el escenario severo ($+20\%$ demanda, $-15\%$ eficiencia) el PID \emph{sin} supervisor llena las esteras hasta la capacidad (ocupación 3.0~piezas, margen nulo) y pasa 16 muestras en alarma, mientras el mismo PID \emph{con} supervisor reduce la ocupación a 2.72~piezas y la alarma a solo 2~muestras. El supervisor (reducción de admisión, redirección del robot y refuerzo de ganancias) es el que convierte un sistema que se desborda bajo estrés en uno que se mantiene dentro de límites.
+Fase~2 (coordinación). La Tabla~\ref{tab:aware_baseline} cuantifica el antes/después. En condiciones nominales la diferencia es modesta: la celda está sobredimensionada y el PID base ya se mantiene seguro (ocupación máxima 1.74~piezas, cero alarmas), con IAE solo $\sim14\%$ peor que el supervisado (13.0 frente a 11.4). El supervisor cambia el resultado bajo condiciones exigentes: en el escenario severo ($+20\%$ demanda, $-15\%$ eficiencia) el PID \emph{sin} supervisor supera la capacidad (ocupación máxima 3.64~piezas) y pasa 20 muestras en alarma, mientras el mismo PID \emph{con} supervisor reduce la ocupación a 2.72~piezas y la alarma a solo 2~muestras. La reducción de admisión, la redirección del robot y el refuerzo de ganancias evitan el desbordamiento que, sin supervisor, se produce en el escenario severo.
 
 \input{artifacts/tables/aware_baseline.tex}
 
-En eficiencia, el Q-Learning reduce el consumo energético respecto al PID supervisado en $169.31 - 163.52 = 5.79$ unidades ($3.4\%$), con productividad algo menor (72.1 frente a 74.7~piezas); el DL aporta el mayor margen de seguridad (1.43~piezas) y la mayor productividad (74.93). Así, el valor del control inteligente no está en el seguimiento de referencia (el PID retuneado ya es el mejor en IAE), sino en la coordinación del robot, el margen del DL, la eficiencia del Q-Learning y la robustez del supervisor ante el cambio de peso.
+En eficiencia, el Q-Learning reduce el consumo energético respecto al PID supervisado en $169.3 - 163.6 = 5.7$ unidades ($3.4\%$), con productividad algo menor (72.1 frente a 74.7~piezas); el DL aporta el mayor margen de seguridad (1.29~piezas) y la mayor productividad (74.8). Así, el valor del control inteligente no está en el seguimiento de referencia (el PID resintonizado ya es el mejor en IAE), sino en la coordinación del robot, el margen del DL, la eficiencia del Q-Learning y la robustez del supervisor ante el cambio de peso.
 
 \section{Ensayo de robustez: escenario severo de operación}
 \label{sec:robustez_severa}
@@ -147,7 +163,7 @@ Para validar el requisito RNF-03 se somete a los cuatro controladores, sin resin
 
 \input{artifacts/tables/robustness_comparison.tex}
 
-El IAE crece en todos los métodos al endurecer las condiciones (la planta exige más velocidad de descarga de la disponible en régimen nominal), pero la capa de supervisión de capacidad mantiene cero violaciones ($n_i<3$) en los cuatro casos. El Q-Learning es el más robusto con diferencia: su IAE solo sube de $25.7$ a $32.5$ y la ocupación máxima se queda en $1.87$~piezas (margen $1.13$), porque su política opera por debajo del objetivo. PID, Fuzzy y DL acercan la ocupación al umbral de alarma ($2.72$, $2.77$ y $2.73$~piezas; márgenes $0.28$, $0.23$ y $0.27$) y multiplican su IAE (PID $11.4\to64.7$; Fuzzy $37.2\to128$; DL $22.1\to59$). Ante un cambio severo de condiciones sin resintonizar, el supervisor de capacidad es la barrera que asegura RNF-03 con independencia del controlador primario, y el margen estructural del Q-Learning lo hace el más tolerante a la degradación.
+El IAE crece en todos los métodos al endurecer las condiciones (la planta exige más velocidad de descarga de la disponible en régimen nominal), pero la capa de supervisión de capacidad mantiene cero violaciones ($n_i<3$) en los cuatro casos. El Q-Learning presenta la menor degradación: su IAE solo sube de $26.1$ a $32.1$ y la ocupación máxima se queda en $1.87$~piezas (margen $1.13$), porque su política opera por debajo del objetivo. PID, Fuzzy y DL acercan la ocupación al umbral de alarma ($2.72$, $2.77$ y $2.73$~piezas; márgenes $0.28$, $0.23$ y $0.28$) y multiplican su IAE (PID $11.4\to64.7$; Fuzzy $37.2\to128$; DL $25.8\to61.6$). Ante un cambio severo de condiciones sin resintonizar, el supervisor de capacidad es la barrera que asegura RNF-03 para los cuatro controladores, y el margen estructural del Q-Learning lo hace el más tolerante a la degradación.
 
 \section{Ensayo de robustez: perturbación en rampa trapezoidal}
 \label{sec:robustez_rampa}
@@ -156,7 +172,7 @@ Para evaluar la capacidad de generalización de cada controlador ante una pertur
 
 \artifactfigure{figures/plots/fig_robustez_rampa.png}{0.98}{Robustez ante perturbación en rampa trapezoidal (línea discontinua) vs. escalón estándar (línea continua). La banda roja sombreada representa $d(k)/4$ para indicar la forma de la perturbación. Las etiquetas muestran el IAE y la variación porcentual respecto al escalón.}
 
-\begin{longtable}{@{}P{0.10\linewidth}P{0.14\linewidth}P{0.14\linewidth}P{0.12\linewidth}P{0.42\linewidth}@{}}
+\begin{longtable}{@{}P{0.10\linewidth}P{0.12\linewidth}P{0.12\linewidth}P{0.10\linewidth}P{0.36\linewidth}@{}}
 \caption{IAE ante escalón vs.\ rampa trapezoidal. Variación negativa indica mejora; positiva, degradación.}
 \label{tab:robustez_rampa}\\
 \toprule
@@ -165,7 +181,7 @@ Método & IAE escalón & IAE rampa & $\Delta$ (\%) & Interpretación \\ \midrule
 PID   & 3.89 & 3.72 & $-4.4\%$  & Integral acumula menos error por la subida gradual. \\
 Fuzzy & 5.97 & 5.03 & $-15.8\%$ & $\mu_{YES}(d)$ crece con $d$: respuesta anticipatoria proporcional a la rampa.\\
 DL    & 1.90 & 1.58 & $-16.9\%$ & $d\in[0,1]$ continua: la red interpola y actúa desde la primera muestra de la rampa.\\
-QL    & 1.80 & 2.14 & $+18.6\%$ & $d_{bin}=\lfloor d{>}0.5\rfloor$: punto ciego de 6~muestras que ahora \emph{empeora} el IAE.\\
+QL    & 1.80 & 2.14 & $+18.9\%$ & $d_{bin}=\lfloor d{>}0.5\rfloor$: punto ciego de 6~muestras que ahora \emph{empeora} el IAE.\\
 \bottomrule
 \end{longtable}
 
@@ -175,22 +191,25 @@ Para tres de los cuatro, la rampa es más fácil que el escalón. El escalón ap
 
 El DL es el más beneficiado ($-16.9\%$). Con la entrada $d\in[0,1]$, la red reacciona proporcionalmente desde $k=85$, cuando $d=0.083$, sin esperar a que la perturbación sea completa. Tratar $d$ como entrada continua (no binaria) mejora la generalización a formas de perturbación no vistas durante el entrenamiento.
 
-El Fuzzy también se beneficia ($-15.8\%$). La función de pertenencia $\mu_{YES}(d)$ activa la regla de perturbación de forma gradual: a $d=0.4$, la regla de alta velocidad tiene activación parcial que ya compensa parte del efecto. Es el caso más claro de respuesta anticipatoria por diseño.
+El Fuzzy también se beneficia ($-15.8\%$). La función de membresía $\mu_{YES}(d)$ activa la regla de perturbación de forma gradual: a $d=0.4$, la regla de alta velocidad tiene activación parcial que ya compensa parte del efecto. Es el caso más claro de respuesta anticipatoria por diseño.
 
-El QL empeora ($+18.6\%$): la codificación binaria pasa factura. La codificación $d_{bin}=\lfloor d>0.5\rfloor$ crea un punto ciego de 6~muestras: de $k=85$ a $k=91$ el agente no detecta la perturbación y actúa en régimen nominal. Al cruzar $d=0.5$ en $k=92$ cambia de estado abruptamente. A diferencia del escalón (donde el agente entrenó con $d$ activo desde el inicio), en la rampa esa reacción tardía deja crecer el error y el IAE sube. Esto cuantifica la limitación de la codificación binaria del estado frente a la entrada continua del DL y el Fuzzy.
+El QL empeora ($+18.9\%$): la codificación binaria penaliza el desempeño. La codificación $d_{bin}=\lfloor d>0.5\rfloor$ crea un punto ciego de 6~muestras: de $k=85$ a $k=91$ el agente no detecta la perturbación y actúa en régimen nominal. Al cruzar $d=0.5$ en $k=92$ cambia de estado abruptamente. A diferencia del escalón (donde el agente entrenó con $d$ activo desde el inicio), en la rampa esa reacción tardía deja crecer el error y el IAE sube. Esto cuantifica la limitación de la codificación binaria del estado frente a la entrada continua del DL y el Fuzzy.
 
 \section{Por qué es necesaria la supervisión}
 
-Un PID escalar sin supervisor no puede coordinar el reparto del robot, reducir la admisión al detectar congestión, ni reforzar sus propias ganancias ante la perturbación de peso. Los métodos inteligentes incorporan parte de esta coordinación en su política, pero la capa supervisora se mantiene activa como barrera de seguridad con independencia del controlador primario.
+Un PID escalar sin supervisor no puede coordinar el reparto del robot, reducir la admisión al detectar congestión, ni reforzar sus propias ganancias ante la perturbación de peso. La evidencia central es el escenario severo de la Tabla~\ref{tab:aware_baseline}: sin supervisor, el PID alcanza 3.64~piezas y acumula 20~muestras en alarma; con supervisor, la ocupación baja a 2.72~piezas y la alarma a 2~muestras. Los métodos inteligentes incorporan parte de esta coordinación en su política, pero la capa supervisora se mantiene activa como barrera de seguridad para cualquier controlador primario.
 
 \section{Comparación de métodos: síntesis}
 
-\begin{longtable}{@{}P{0.16\linewidth}P{0.175\linewidth}P{0.175\linewidth}P{0.175\linewidth}P{0.175\linewidth}@{}}
+\begin{table}[H]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{0.95}
 \caption{Resumen comparativo de los cuatro métodos en ambas fases. Mejor valor en negrita.}
-\label{tab:resumen_comparativo}\\
+\label{tab:resumen_comparativo}
+\begin{tabular}{@{}P{0.16\linewidth}P{0.175\linewidth}P{0.175\linewidth}P{0.175\linewidth}P{0.175\linewidth}@{}}
 \toprule
- & PID & Fuzzy & DL & Q-Learning \\ \midrule \endfirsthead
-\toprule & PID & Fuzzy & DL & Q-Learning \\ \midrule \endhead
+ & PID & Fuzzy & DL & Q-Learning \\ \midrule
 \multicolumn{5}{@{}l}{\textit{Fase~1: Servo}} \\ \midrule
 IAE & tercero (3.89) & cuarto (5.97) & segundo (1.90) & \textbf{mejor (1.80)}\\
 Sobreimpulso & \textbf{mínimo (0)} & \textbf{mínimo (0)} & \textbf{mínimo (0)} & \textbf{mínimo (0)}\\
@@ -200,12 +219,12 @@ Var. mando & alta (3.12) & segunda (1.85) & \textbf{mínima (1.65)} & muy alta (
 Saturación mando & satura & \textbf{no (0.816)} & \textbf{no (0.863)} & satura\\
 \midrule
 \multicolumn{5}{@{}l}{\textit{Fase~2: Aware R2ET}} \\ \midrule
-IAE total & \textbf{menor (11.4)} & cuarto (37.2) & segundo (22.1) & tercero (25.7)\\
-IAE perturbación & \textbf{menor (1.07)} & tercero (1.82) & segundo (1.29) & mayor (6.12)\\
-Productividad & segunda (74.7) & segunda (74.7) & \textbf{mayor (74.9)} & menor (72.1)\\
-Energía & media & media & media & \textbf{menor (164)}\\
-Desbalance & \textbf{menor (0.011)} & 0.012 & mayor (0.030) & 0.014\\
-Margen seguridad & bueno (1.26) & ajustado (0.80) & \textbf{mayor (1.43)} & bueno (1.24)\\
+IAE total & \textbf{menor (11.4)} & cuarto (37.2) & segundo (25.8) & tercero (26.1)\\
+IAE perturbación & \textbf{menor (1.07)} & segundo (1.82) & tercero (4.27) & mayor (6.70)\\
+Productividad & segunda (74.7) & segunda (74.7) & \textbf{mayor (74.8)} & menor (72.1)\\
+Energía & 169.3 & 169.4 & 169.2 & \textbf{menor (163.6)}\\
+Desbalance & \textbf{menor (0.011)} & 0.012 & mayor (0.043) & 0.017\\
+Margen seguridad & bueno (1.26) & ajustado (0.80) & \textbf{mayor (1.29)} & bueno (1.24)\\
 Violaciones & \textbf{0} & \textbf{0} & \textbf{0} & \textbf{0}\\
 \midrule
 \multicolumn{5}{@{}l}{\textit{Fortaleza principal}} \\ \midrule
@@ -213,4 +232,6 @@ Violaciones & \textbf{0} & \textbf{0} & \textbf{0} & \textbf{0}\\
 \multicolumn{5}{@{}l}{\textit{Debilidad principal}} \\ \midrule
  & Lento en servo & Mayor IAE global (sin integral) & Desbalance algo mayor & Mando bang-bang; frágil a rampa (binario)\\
 \bottomrule
-\end{longtable}
+\end{tabular}
+\end{table}
+\normalsize

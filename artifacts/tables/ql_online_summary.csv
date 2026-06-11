@@ -1,4 +1,4 @@
 Fase,Episodios,IAE_medio,Mejora_pct
-Offline (línea base),0,25.746,0.0
-Q1 online (ep. 1-12),12,34.208,-32.9
-Q4 online (ep. 38-50),13,40.5,-57.3
+Offline (línea base),0,26.13,0.0
+Primeros \emph{online} (ep. 1-12),12,41.07,-57.2
+Últimos \emph{online} (ep. 38-50),13,42.289,-61.8

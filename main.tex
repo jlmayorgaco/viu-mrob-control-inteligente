@@ -1,7 +1,7 @@
 \documentclass[11pt,oneside]{report}
 \usepackage{viu-mrob-activity}
 \setlength{\headheight}{23.12pt}
-\usepackage{amsmath, amssymb, booktabs, array, graphicx, caption, subcaption, float, placeins, colortbl, longtable, tikz}
+\usepackage{amsmath, amssymb, booktabs, array, graphicx, float, placeins, colortbl, longtable, tikz}
 \usepackage[table]{xcolor}
 \usepackage{geometry, enumitem, siunitx, listings, upquote}
 \sisetup{output-decimal-marker={,}, per-mode=symbol, detect-weight=true, detect-family=true}
@@ -62,7 +62,7 @@
 \SetVIUGrupo{Grupo 1, Caso R2ET}
 \SetVIUFileName{Grupo_1_Act_08MPRO.pdf}
 \SetVIUActivityType{Actividad 08 MROB}
-\SetVIUActivityTitle{Diseño de configuración de sistema inteligente avanzado integrado\\[4pt]en una Celda de Manufactura Flexible}
+\SetVIUActivityTitle{Diseño y configuración de un sistema de control inteligente avanzado integrado\\[4pt]en una Celda de Manufactura Flexible}
 \SetVIUProfessor{Equipo docente VIU}
 \SetVIUContributors{%
   \textbf{Estudiantes}\\[4pt]
@@ -101,12 +101,12 @@
       \caption{#3}
     \end{figure}
   }{%
-    \missingartifactbox{Figura pendiente de generación: \texttt{\detokenize{#1}}. \\
+    \missingartifactbox{Figura no encontrada en el repositorio: \texttt{\detokenize{#1}}. \\
     Ejecutar: \texttt{python src/python/v2\_simulate.py}}%
   }%
 }
 
-% Captura de modelo Simulink (insertar el PNG en figures/simulink/)
+% Captura de modelo Simulink
 \newcommand{\simulinkfigure}[3]{%
   \IfFileExists{#1}{%
     \begin{figure}[H]
@@ -116,7 +116,7 @@
     \end{figure}
   }{%
     \begin{figure}[H]\centering
-    \missingartifactbox{\textbf{Captura del modelo Simulink} (pendiente de inserción): \texttt{\detokenize{#1}}.}
+    \missingartifactbox{\textbf{Captura del modelo Simulink no encontrada}: \texttt{\detokenize{#1}}.}
     \caption{#3}
     \end{figure}
   }%

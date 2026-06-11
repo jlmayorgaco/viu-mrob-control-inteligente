@@ -13,11 +13,11 @@
   \input{glyphtounicode}
   \pdfgentounicode=1
   \RequirePackage{cmap}
+  \RequirePackage[utf8]{inputenc}
 \fi
 \RequirePackage[spanish,es-noshorthands,shorthands=off]{babel}
 \addto\captionsspanish{\renewcommand{\tablename}{Tabla}}
 \RequirePackage[T1]{fontenc}
-\RequirePackage[utf8]{inputenc}
 \RequirePackage{lmodern}
 \RequirePackage{microtype}
 \RequirePackage{setspace}
@@ -99,7 +99,7 @@
 \newcommand{\VIUProfessor}{Félix García Padilla}
 \newcommand{\VIULogo}{logo-viu}
 \newcommand{\VIULogoPath}{images/}
-\newcommand{\VIUFileName}{Actividad_NombreApellido.pdf}
+\newcommand{\VIUFileName}{Grupo_1_Act_08MPRO.pdf}
 \newcommand{\VIUCoverBgPath}{images/bg-viu}
 \newcommand{\VIUDate}{\today}
 
@@ -132,7 +132,7 @@
 \fancyhf{}
 
 % Header (discreto)
-\fancyhead[L]{\textbf{MROB–VIU} • \nouppercase{\leftmark}}
+\fancyhead[L]{\textbf{MROB--VIU} \textbullet{} \nouppercase{\leftmark}}
 \fancyhead[R]{\textit{\VIUActivityType}}
 
 % Footer con paginación en naranja
@@ -141,9 +141,7 @@
 % Head rule en naranja sutil
 \renewcommand{\headrulewidth}{0.35pt}
 \renewcommand{\headrule}{%
-  \hbox to\headwidth{%
-    \color{UniPrimary!55}\leaders\hrule height \headrulewidth\hfill
-  }%
+  {\color{UniPrimary!55}\hrule height \headrulewidth width\headwidth}%
 }
 \renewcommand{\footrulewidth}{0pt}
 
@@ -154,9 +152,7 @@
     \fancyfoot[C]{\small\color{UniPrimary}\textbf{Página \thepage{} de \pageref{LastPage}}}
     \renewcommand{\headrulewidth}{0.35pt}
     \renewcommand{\headrule}{%
-      \hbox to\headwidth{%
-        \color{UniPrimary!55}\leaders\hrule height \headrulewidth\hfill
-      }%
+      {\color{UniPrimary!55}\hrule height \headrulewidth width\headwidth}%
     }
 }
 

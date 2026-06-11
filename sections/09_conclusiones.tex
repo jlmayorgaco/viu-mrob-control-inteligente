@@ -1,42 +1,42 @@
 \chapter{Conclusiones}
 \label{ch:conclusiones}
 
-\section*{Fase~1: Servoregulador}
+\section*{Fase~1: Servorregulador}
 
-Los cuatro métodos regulan $y(k)$ ante el escalón y la perturbación de carga, aunque con rendimientos muy dispares.
+Los cuatro métodos regulan $y(k)$ ante el escalón y la perturbación de carga, aunque con diferencias relevantes de desempeño.
 
-El menor IAE corresponde al Q-Learning: $1.80$, sin sobreimpulso, con establecimiento en $10$~muestras y recuperación inmediata. Su limitación está en el mando. Satura ($u_{max}=1.0$) y acumula la mayor variación del grupo ($\sum|\Delta u|=7.10$), porque sus 8~acciones discretas imponen un comportamiento bang-bang. La codificación binaria de la perturbación añade otra debilidad: lo vuelve frágil ante una rampa no vista en el entrenamiento (Sección~\ref{sec:robustez_rampa}).
+El menor IAE corresponde al Q-Learning: $1.80$, sin sobreimpulso, con establecimiento en $10$~muestras y recuperación inmediata. Su limitación está en el mando: satura ($u_{max}=1.0$) y acumula la mayor variación del grupo ($\sum|\Delta u|=7.10$), porque sus 8~acciones discretas imponen un comportamiento bang-bang. Su discretización de la perturbación lo vuelve frágil ante una rampa no vista en el entrenamiento (Sección~\ref{sec:robustez_rampa}).
 
-La red profunda queda muy cerca y ofrece el mejor equilibrio global: IAE~$=1.90$ (la mitad que el PID), sin sobreimpulso, $t_s=10$~muestras, el mando más suave de los cuatro ($\sum|\Delta u|=1.65$) y sin saturar ($u_{max}=0.863$). El origen de esa ventaja es el entrenamiento. El gradiente del IAE se propaga hacia atrás por la dinámica de la planta (ecuaciones~\ref{eq:adjoint}--\ref{eq:grad_u}) y ajusta los pesos directamente hacia la política; al recibir la perturbación como señal continua, generaliza mejor que el resto ante la rampa.
+La red profunda obtiene un resultado próximo y ofrece el mejor equilibrio global: IAE~$=1.90$ (la mitad que el PID), sin sobreimpulso, $t_s=10$~muestras, el mando más suave de los cuatro ($\sum|\Delta u|=1.65$) y sin saturar ($u_{max}=0.863$). Esa ventaja procede del entrenamiento: el gradiente del IAE se propaga hacia atrás por la dinámica de la planta (ecuaciones~\ref{eq:adjoint}--\ref{eq:grad_u}) y ajusta los pesos directamente hacia la política; al recibir la perturbación como señal continua, generaliza mejor que el resto ante la rampa.
 
 El difuso responde a otra prioridad. Sus 35~reglas logran el menor consumo y el actuador más conservador ($u_{max}=0.816$), lo que conviene cuando la velocidad de cambio del actuador está muy limitada. A cambio es el más lento en asentarse ($t_s=19$, Rec=12) y el de mayor IAE ($5.97$), por no incorporar acción integral.
 
-Queda el PID. Reajustadas las ganancias, llega a IAE~$=3.89$, se establece en $16$~muestras y se recupera sin demora gracias a la integral. Supera al difuso, pero las dos políticas de aprendizaje conservan la delantera en IAE.
+El PID, tras el ajuste de ganancias, llega a IAE~$=3.89$, se establece en $16$~muestras y se recupera sin demora gracias a la integral. Supera al difuso, pero las dos políticas de aprendizaje conservan la delantera en IAE.
 
 \section*{Fase~2: Coordinación R2ET}
 
-Ninguno de los cuatro métodos viola la capacidad de las esteras ni cruza el umbral de alarma; la capa de supervisión de capacidad garantiza ese resultado sea cual sea el controlador primario.
+Ninguno de los cuatro métodos viola la capacidad de las esteras ni cruza el umbral de alarma; la capa de supervisión de capacidad garantiza ese resultado en todos los casos.
 
-El PID-Aware, con las ganancias reajustadas, registra el menor IAE total ($11.41$) y también el menor durante el atasco ($1.07$), con el desbalance más bajo ($0.011$). La integral lleva $n_i$ a $n^*$ sin error residual; que no anticipe el atasco lo compensa el supervisor.
+El PID-Aware, con las ganancias resintonizadas, registra el menor IAE total ($11.41$) y también el menor durante el atasco ($1.07$), con el desbalance más bajo ($0.011$). La integral lleva $n_i$ a $n^*$ sin error residual; que no anticipe el atasco lo compensa el supervisor.
 
-El DL-Aware usa la red más profunda ($8\!\to\!96\!\to\!\dots\!\to\!3$) y 1200~épocas. Baja a IAE~$=22.14$ (segundo) y, sobre todo, consigue el mayor margen de seguridad ($1.43$~piezas, con ocupación máxima de solo $1.57$) y la mayor productividad ($74.93$). El método adjunto de dos esteras converge bien cuando se le dan capacidad y épocas suficientes.
+El DL-Aware usa la red más profunda ($8\!\to\!96\!\to\!\dots\!\to\!3$) y 1200~épocas. Reduce el IAE hasta $25.83$ (segundo) y, sobre todo, consigue el mayor margen de seguridad ($1.29$~piezas, con ocupación máxima de $1.71$) y la mayor productividad ($74.82$). La optimización directa de dos esteras converge de forma estable al disponer de capacidad de red y épocas suficientes.
 
-Distinto es el perfil del Q-Learning-Aware: IAE~$=25.75$ (tercero), pero el menor consumo ($163.52$) y la mayor robustez en el escenario severo. Opera en la zona baja de ocupación sin malgastar velocidad. Su punto flaco vuelve a ser el atasco, donde el IAE sube a $6.12$ por la codificación binaria de la perturbación.
+El Q-Learning-Aware prioriza otro criterio: con IAE~$=26.13$ (tercero), logra el menor consumo ($163.6$) y la mayor robustez en el escenario severo. Opera en la zona baja de ocupación sin malgastar velocidad. Su principal debilidad vuelve a manifestarse durante el atasco, donde el IAE sube a $6.70$ por la codificación binaria de la perturbación.
 
-El difuso-Aware recorta su IAE de $56.3$ (versión de 15~reglas) a $37.2$ con las 35~reglas, manteniendo un IAE de atasco bajo ($1.82$) y un desbalance mínimo ($0.012$). Sin acción integral no alcanza a PID, DL ni QL en IAE total, pero sus reglas son auditables sin datos ni entrenamiento.
+El difuso-Aware recorta su IAE a $37.2$, manteniendo un IAE de atasco bajo ($1.82$) y un desbalance mínimo ($0.012$). Sin acción integral no alcanza a PID, DL ni QL en IAE total, pero sus reglas son auditables sin datos ni entrenamiento.
 
 \section*{Supervisor inteligente}
 
-El supervisor combina dos capas: el ajuste dinámico de las ganancias del PID y una barrera dura de capacidad. Con ellas, ningún método registra violaciones ante el cambio de peso. Sin esa barrera, ningún controlador escalar coordinaría el reparto del robot ni recortaría la admisión a tiempo.
+El supervisor combina dos capas: el ajuste dinámico de las ganancias del PID y una barrera dura de capacidad. Con ellas, ningún método registra violaciones ante el cambio de peso. Sin esa barrera, ningún controlador escalar coordinaría el reparto del robot ni recortaría la admisión con la antelación necesaria.
 
 \section*{Recomendación para la CMF R2ET}
 
 La elección del controlador depende, en ambas fases, del criterio que se priorice.
 
-En la capa servo local (una sola estera, Fase~1) la mejor opción es la red profunda con ajuste directo por adjunto: bate al PID en IAE, no satura y entrega un mando suave. Entrenada una vez, su inferencia es casi instantánea y no pide resintonización.
+En la capa servo local (una sola estera, Fase~1) la mejor opción técnica es la red profunda entrenada sobre el gemelo digital: bate al PID en IAE, no satura y entrega un mando suave. Entrenada una vez, su inferencia es casi instantánea y no exige resintonización manual.
 
-En la coordinación R2ET (dos esteras, cambio de peso) no hay un ganador único. El PID-Aware retuneado da el menor IAE y es el más fácil de mantener; el DL ofrece el mayor margen de seguridad y productividad; el Q-Learning gana en eficiencia energética y en robustez ante condiciones severas. Y si se busca un despliegue auditable, sin datos ni entrenamiento, el difuso de 35~reglas es la alternativa transparente, al precio de un IAE total mayor.
+Para una primera implantación en la CMF R2ET, la estrategia seleccionada es el controlador difuso Mamdani integrado con la capa supervisora de capacidad. Esta elección no se basa en el IAE, donde el PID-Aware es superior, sino en la trazabilidad de las reglas, la facilidad de ajuste por personal de planta y la posibilidad de imponer restricciones de seguridad de forma explícita. El PID-Aware queda como línea base y respaldo industrial; Deep Learning y Q-Learning muestran ventajas puntuales en margen, productividad, energía y robustez, pero se recomiendan inicialmente para validación en gemelo digital o modo sombra antes de una implantación directa.
 
 \section*{Contribución metodológica}
 
-Comparar bajo condiciones idénticas (misma planta, escenario y semilla) tiene una ventaja: atribuye las diferencias al controlador y no al banco de pruebas. En el lazo servo, la red profunda divide por dos el IAE del PID sin saturar el actuador y con la menor variación de mando. En las dos esteras, darle más profundidad y más épocas baja su IAE de $75$ a $22$, lo que confirma que el factor limitante era la capacidad y el presupuesto de entrenamiento, no el método.
+Comparar bajo condiciones idénticas (misma planta, escenario y semilla) atribuye las diferencias al controlador y no al banco de pruebas. En el lazo servo, la red profunda divide por dos el IAE del PID sin saturar el actuador y con la menor variación de mando. En las dos esteras, aumentar el tamaño de la red y la duración del entrenamiento reduce sustancialmente el IAE y confirma que el factor limitante era la capacidad del aproximador, no el método en sí.

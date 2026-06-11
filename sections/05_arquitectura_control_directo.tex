@@ -1,11 +1,11 @@
-\chapter{4.2.c Arquitectura de control directo inteligente}
+\chapter{Arquitectura de control directo inteligente}
 \label{ch:arquitectura}
 
-Nota sobre herramienta de simulación. La arquitectura se documenta en dos formatos complementarios: diagramas vectoriales (TikZ) para la explicación funcional y modelos Simulink del lazo de control y del supervisor (las capturas correspondientes se incluyen en cada apartado). La simulación cuantitativa (entrenamiento, métricas y figuras de resultados) corre en Python~3.13 con NumPy, con reproducibilidad exacta (semilla fija SEED=8, sin dependencia de versión de toolbox). La planta empleada en ambos entornos es la misma discretización ZOH de la función de transferencia $G_p(s)$ asignada en la guía (Capítulo~\ref{ch:contexto}). El código fuente completo figura en el Apéndice~A.
+Correspondencia con la guía: apartado 4.2.c. La arquitectura se documenta en dos formatos complementarios: diagramas vectoriales (TikZ) para la explicación funcional y modelos Simulink del lazo de control y del supervisor (las capturas correspondientes se incluyen en cada apartado). La simulación cuantitativa (entrenamiento, métricas y figuras de resultados) corre en Python~3.13 con NumPy, con semilla fija SEED=8 y sin dependencia de versiones de toolbox. La planta servo empleada en los ensayos cuantitativos es el modelo reducido de primer orden obtenido de la dinámica dominante de $G_p(s)$ y discretizado por ZOH (Capítulo~\ref{ch:contexto}); la Fase~2 usa el balance de masa R2ET sin recorte superior de capacidad. El Apéndice~A muestra extractos representativos y los scripts completos se entregan junto con el informe.
 
-\section{Fase 1: Servoregulador}
+\section{Fase 1: Servorregulador}
 
-La Fase~1 valida cada controlador sobre la planta de primer orden discreta del Grupo~1 (ecuación~\ref{eq:planta_servo}), actuando como servoregulador. La señal de referencia es un escalón al nivel de operación $r=0.6$ activado en $k=10$; la perturbación de carga ($d=1$, cambio de peso en las piezas) actúa entre las muestras $k=85$ y $k=110$.
+La Fase~1 valida cada controlador sobre el modelo servo reducido del Grupo~1 (ecuación~\ref{eq:planta_servo}), actuando como servorregulador. La señal de referencia es un escalón al nivel de operación $r=0.6$ activado en $k=10$; la perturbación de carga ($d=1$, cambio de peso en las piezas) actúa entre las muestras $k=85$ y $k=110$.
 
 El ensayo comprende tres tramos: reposo ($k<10$, $y=0$, $r=0$); escalón de referencia en $k=10$ con transitorio hacia $y=0.6$; y perturbación de carga ($d=1$) entre $k=85$ y $k=110$ que deprime la salida, seguida de la vuelta a referencia. Con un único ensayo se evalúan simultáneamente el seguimiento de referencia y el rechazo de perturbaciones.
 
@@ -44,18 +44,39 @@ El ensayo comprende tres tramos: reposo ($k<10$, $y=0$, $r=0$); escalón de refe
 \label{fig:control_servo}
 \end{figure}
 
-\simulinkfigure{figures/simulink/sl_pid_servo.png}{0.85}{Modelo Simulink del lazo servo digital (Fase~1): referencia, PID discreto, saturación del actuador y planta discreta (ZOH de $G_p(s)$) con perturbación de carga.}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=5in]{images/Planta .png}
+    \caption{Diagrama de bloques para la representación discreta del comportamiento de la planta.}
+\end{figure}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=5in]{images/Diagrama de bloques PID.png}
+    \caption{Modelo Simulink del lazo servo digital (Fase~1): referencia, PID discreto, saturación del actuador y modelo reducido discretizado por ZOH a partir de $G_p(s)$, con perturbación de carga.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=5in]{images/Salida controlador PID de planta discreta.png}
+    \caption{Salida del sistema: lazo cerrado con controlador PID discreto, saturación del actuador y modelo reducido discretizado por ZOH, con perturbación de carga.}
+\end{figure}
+    
+
 
 \subsection*{Explicación funcional de cada bloque}
 
 \begin{longtable}{@{}P{0.18\linewidth}P{0.28\linewidth}P{0.42\linewidth}@{}}
+\caption{Explicación funcional de los bloques del lazo servo.}
+\label{tab:bloques_servo}\\
 \toprule
 Bloque & Función & Detalles de implementación \\ \midrule
 Referencia & Genera el escalón de referencia & $r(k) = 0.6\cdot\mathbf{1}[k \geq 10]$; nivel de operación.\\
 Sumador $\Sigma$ & Error de seguimiento & $e(k) = r(k) - y(k)$; diferencia puntual en cada muestra.\\
 Controlador & Calcula el mando $u^*$ & PID: anti-windup; Fuzzy: reglas Mamdani; DL: inferencia red; QL: tabla Q greedy.\\
 Saturación & Limita el mando & $u(k) = \operatorname{sat}(u^*, 0.05, 1.0)$; restricción física del actuador.\\
-Planta & Dinámica de la estera & $y(k{+}1) = 0.92\,y + 0.08\,u - 0.024\,d$; $a=0.92$, $b=0.08$, $b_d=0.024$.\\
+Planta & Dinámica servo reducida & $y(k{+}1) = 0.92\,y + 0.08\,u - 0.024\,d$; $a=0.92$, $b=0.08$, $b_d=0.024$.\\
 Perturbación & Cambio de peso & $d(k)=1$ durante $k=85$--$110$; simula piezas pesadas que reducen descarga.\\
 \bottomrule
 \end{longtable}
@@ -123,11 +144,30 @@ Perturbación & Cambio de peso & $d(k)=1$ durante $k=85$--$110$; simula piezas p
   \draw[farr] (inf.east) -- (def.west);
   \draw[farr] (def.east) -- (out.west);
 \end{tikzpicture}}
-\caption{Flujo de cálculo del controlador difuso Mamdani: fuzzificación → inferencia AND-mín con 35 reglas → defuzzificación por promedio ponderado de los consecuentes.}
+\caption{Flujo de cálculo del controlador difuso Mamdani: fuzzificación $\rightarrow$ inferencia AND-mín con 35 reglas $\rightarrow$ defuzzificación por promedio ponderado de los consecuentes.}
 \label{fig:fuzzy_flow}
 \end{figure}
 
-\simulinkfigure{figures/simulink/sl_control_directo.png}{0.9}{Modelo Simulink de la arquitectura de control digital directo inteligente (4.2.c): referencia → error → controlador inteligente directo (fuzzificación, inferencia AND-mín, defuzzificación WA) → saturación → planta. El bloque del controlador es intercambiable (Fuzzy/DL/QL).}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=5in]{images/Control difuso diagrama bloques.png}
+    \caption{Modelo Simulink de la arquitectura de control digital directo inteligente (4.2.c): referencia $\rightarrow$ error $\rightarrow$ controlador inteligente directo (fuzzificación, inferencia AND-mín, defuzzificación WA) $\rightarrow$ saturación $\rightarrow$ planta. El bloque del controlador es intercambiable (Fuzzy/DL/QL).}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=5in]{images/Controlador inteligente directo.png}
+    \caption{Subsistema del controlador inteligente directo basado en las entradas $e$, $\Delta e$ y $d$, con salida de control $u^*(k)$.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=5in]{images/Controlador difuso mamdani.png}
+    \caption{Respuesta del sistema ante entrada escalón: comparación entre la referencia y la salida (y(k)) de la planta discreta.}
+\end{figure}
+
+Validación Simulink--Python. Las capturas Simulink de esta sección documentan la estructura de bloques y una demo de lazo cerrado; los indicadores cuantitativos del Capítulo~\ref{ch:pruebas} proceden del banco Python, que usa la sintonía final y el mismo modelo discreto de la ecuación~\ref{eq:planta_servo}. Por eso los scopes de Simulink pueden mostrar un régimen permanente visualmente cercano a $0.52$--$0.54$ frente a $r=0.6$: corresponden a una sintonía de demostración previa, no al banco final usado para las tablas. En Python, con la sintonía definitiva, el error estacionario de las últimas 20 muestras queda por debajo del criterio RF-07 para los cuatro métodos (Sección~\ref{ch:pruebas}).
+
 
 \subsubsection*{Deep Learning (red profunda)}
 
@@ -178,8 +218,8 @@ Perturbación & Cambio de peso & $d(k)=1$ durante $k=85$--$110$; simula piezas p
   }
   \node[inp] (e1)  at (0, 3.15)  {$e_1$};
   \node[inp] (e2)  at (0, 2.25)  {$e_2$};
-  \node[inp] (de1) at (0, 1.35)  {$\Delta n_1$};
-  \node[inp] (de2) at (0, 0.45)  {$\Delta n_2$};
+  \node[inp] (de1) at (0, 1.35)  {$\Delta e_1$};
+  \node[inp] (de2) at (0, 0.45)  {$\Delta e_2$};
   \node[inp] (sg1) at (0,-0.45)  {$\sigma_1$};
   \node[inp] (sg2) at (0,-1.35)  {$\sigma_2$};
   \node[inp] (b)   at (0,-2.25)  {$b$};
@@ -229,7 +269,7 @@ Perturbación & Cambio de peso & $d(k)=1$ durante $k=85$--$110$; simula piezas p
   \draw[arr] (qt.east)  -- (arg.west);
   \draw[arr] (arg.east) -- (act.west);
 \end{tikzpicture}}
-\caption{Arquitectura de despliegue del Q-Learning servo (Fase~1): codificación del estado → consulta greedy de la tabla Q → acción discreta de velocidad.}
+\caption{Arquitectura de despliegue del Q-Learning servo (Fase~1): codificación del estado $\rightarrow$ consulta greedy de la tabla Q $\rightarrow$ acción discreta de velocidad.}
 \label{fig:ql_arch}
 \end{figure}
 
@@ -267,8 +307,36 @@ En la Fase~2, el esquema de control se extiende al sistema de dos esteras. Cada 
   \draw[farr]  (4.5,-2.1) -- node[lbl,right,pos=0.55]{$n_1,n_2$} (ctrl.south);
   \fill[UniMuted] (9.0,-2.1) circle (1.4pt);
 \end{tikzpicture}}
-\caption{Arquitectura de control aware Fase~2: controlador primario + supervisor de capacidad (capa de seguridad) → esteras R2ET. La perturbación $d$ y el caudal $\lambda$ del robot entran al modelo de las esteras.}
+\caption{Arquitectura de control aware Fase~2: controlador primario + supervisor de capacidad (capa de seguridad) $\rightarrow$ esteras R2ET. La perturbación $d$ y el caudal $\lambda$ del robot entran al modelo de las esteras.}
 \label{fig:control_aware}
 \end{figure}
 
-\simulinkfigure{figures/simulink/sl_r2et_aware.png}{0.9}{Modelo Simulink de la coordinación R2ET (Fase~2): controlador genera $u_1,u_2,r_1$; el supervisor de capacidad actúa como barrera de seguridad sobre las dos esteras (capacidad 3~piezas).}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=5in]{images/Sistema_completo_R2ET.png}
+    \caption{Modelo Simulink de la coordinación R2ET (Fase~2): controlador genera $u_1,u_2,r_1$; el supervisor de capacidad actúa como barrera de seguridad sobre las dos esteras (capacidad 3~piezas).}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=5in]{images/Controlador_primario.png}
+    \caption{Subsistema del controlador primario R2ET, encargado de generar las señales propuestas $u_1^*$, $u_2^*$ y $r_1^*$ a partir de la referencia de ocupación y los estados $n_1$ y $n_2$.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=5in]{images/Supervisor_capacidad_R2ET.png}
+    \caption{Subsistema supervisor de capacidad, implementado como barrera de seguridad para corregir las señales de control y evitar el desbordamiento de las esteras.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=5in]{images/Esferas_R2ET.png}
+    \caption{Subsistema de esteras R2ET, donde se modela la dinámica discreta de ocupación $n_1(k)$ y $n_2(k)$, considerando caudal efectivo, reparto del robot, descarga y perturbación.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=5in]{images/salida sistema R2ET.png}
+    \caption{Respuesta de ocupación de las esteras R2ET ante perturbación: comparación de $n_1(k)$, $n_2(k)$, referencia de 1.5 piezas y capacidad máxima de 3 piezas. En esta demo el controlador primario es proporcional puro ($K_u=0.5$), por lo que aparece el offset estacionario esperado de un regulador sin acción integral; el PID de ocupación supervisado del Capítulo~\ref{ch:supervisor} elimina ese sesgo y converge a $n^*=1.5$.}
+\end{figure}

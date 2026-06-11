@@ -6,4 +6,4 @@
 clear; clc; close all;
 disp("Activity 08 - Grupo 1 - R2ET");
 disp("Use Python script for full simulation:");
-disp("  python src/python/generate_report_artifacts.py");
+disp("  python src/python/v2_simulate.py");

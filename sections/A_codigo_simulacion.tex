@@ -1,7 +1,7 @@
 \chapter{Programas elaborados}
 \label{ap:codigo}
 
-La simulación completa (entrenamiento de los modelos, evaluación de los cuatro métodos en Fase~1 y Fase~2, y generación de figuras y tablas) está implementada en Python sobre NumPy, pandas y matplotlib, sin dependencias de frameworks externos (PyTorch, TensorFlow, scikit-learn). La red profunda y el Q-Learning se implementan directamente con operaciones matriciales, lo que garantiza reproducibilidad exacta con independencia de la versión de la librería.
+La simulación completa (entrenamiento de los modelos, evaluación de los cuatro métodos en Fase~1 y Fase~2, y generación de figuras y tablas) está implementada en Python sobre NumPy, pandas y matplotlib, sin frameworks de aprendizaje automático (PyTorch, TensorFlow, scikit-learn). La red profunda y el Q-Learning se implementan con operaciones matriciales de NumPy; así se evita depender de versiones concretas de esos frameworks.
 
 Se incluyen los extractos del código que implementan cada controlador y la dinámica de la planta.
 
@@ -18,8 +18,8 @@ Se incluyen los extractos del código que implementan cada controlador y la din�
   showstringspaces=false
 }
 
-\begin{lstlisting}[language=Python, caption={Planta discreta R2ET Grupo~1 y controlador PID con anti-windup.}]
-# Planta de primer orden discreta (ZOH de Gp(s), Ts = tau/12) - ecuacion 2.6
+\begin{lstlisting}[language=Python, caption={Modelo servo reducido del Grupo~1 y controlador PID con anti-windup.}]
+# Modelo reducido de primer orden (ZOH, Ts = tau/12) - ecuación 2.3
 A = 0.92    # polo discreto = e^(-Ts/tau)
 B = 0.08    # ganancia de control = K_f(1-a), K_f = Gp(0) = 1.0
 Bd = 0.024  # ganancia de perturbacion de carga = K_d(1-a)
@@ -39,7 +39,7 @@ def pid_step(e, st, kp, ki, kd, u_min=0.0, u_max=1.0, aw_lim=6.0, ff=0.0):
     return u
 \end{lstlisting}
 
-\begin{lstlisting}[language=Python, caption={Controlador difuso Mamdani: fuzzificacion, inferencia AND-minimo y defuzzificacion por singletons.}]
+\begin{lstlisting}[language=Python, caption={Controlador difuso Mamdani: fuzzificación, inferencia AND-mínimo y defuzzificación por singletons.}]
 # FAM de 35 reglas: 7 conjuntos de error (niveles -3..3) x 5 de derivada (-2..2)
 # Consecuente por niveles: c = u_base + nivel_e*0.12 + nivel_de*0.05
 NIVEL_E  = {"NL":-3,"NM":-2,"NS":-1,"ZE":0,"PS":1,"PM":2,"PL":3}
@@ -52,7 +52,7 @@ def velocidad_difusa(e, de, d, u_base):
     for el, me in mu_e.items():
         if me < 1e-9: continue
         for dl, md in mu_de.items():
-            w = min(me, md)         # AND = minimo (Zadeh)
+            w = min(me, md)         # AND = mínimo (Zadeh)
             if w < 1e-9: continue
             c = np.clip(u_base + NIVEL_E[el]*0.12 + NIVEL_DE[dl]*0.05, 0.05, 0.98)
             num += w * c;  den += w
@@ -63,7 +63,7 @@ def velocidad_difusa(e, de, d, u_base):
     return float(np.clip(num / den, 0.05, 0.98)) if den > 1e-9 else float(u_base)
 \end{lstlisting}
 
-\begin{lstlisting}[language=Python, caption={Actualizacion TD(0) del Q-Learning y codificacion de estado para la coordinacion de esteras.}]
+\begin{lstlisting}[language=Python, caption={Actualización TD(0) del Q-Learning y codificación de estado para la coordinación de esteras.}]
 # Estado: (nivel_E1_bin, nivel_E2_bin, perturbacion_bin) -> 9x9x2 = 162 estados
 # Bins no uniformes, densos cerca de n* = 1.5:
 EDGES = [0.0, 0.5, 0.9, 1.2, 1.4, 1.6, 1.8, 2.1, 2.5, 3.1]
@@ -82,7 +82,7 @@ ACCIONES = np.array([
     [0.62, 0.50, 1.00],  # drenado fino cerca del objetivo
 ])
 
-# Actualizacion TD(0): regla de Bellman
+# Actualización TD(0): regla de Bellman
 r = -1.5*iae - 30.0*violacion - 8.0*alarma - 0.20*desbalance
 Q[s, a] += alpha * (r + gamma * np.max(Q[s_siguiente]) - Q[s, a])
 \end{lstlisting}
@@ -90,6 +90,7 @@ Q[s, a] += alpha * (r + gamma * np.max(Q[s_siguiente]) - Q[s, a])
 \begin{lstlisting}[language=Python, caption={Bucle de simulacion Fase~2: controlador difuso mas supervisor de capacidad.}]
 for k in range(1, N_muestras):
     dm = demanda(k)
+    d  = perturbacion(k)
     ls = perdida_por_perturbacion(k)     # [0.35*d, 0.175*d]
     nm = max(n[k-1])
     e  = n[k-1] - n_objetivo
@@ -102,6 +103,9 @@ for k in range(1, N_muestras):
     if nm > umbral_alarma:
         uk = np.clip(uk + 0.14, 0.05, 1.0)
         admision = 0.72
+    elif d > 0:
+        uk = np.clip(uk + 0.14, 0.05, 1.0)
+        admision = 0.86
     elif nm > umbral_riesgo:
         uk = np.clip(uk + 0.07, 0.05, 1.0)
         admision = 0.90
@@ -109,6 +113,245 @@ for k in range(1, N_muestras):
     # 3. Reparto difuso del robot
     r1 = reparto_difuso(n[k-1,0] - n[k-1,1])
 
-    # 4. Dinamica de las dos esteras (balance de masa)
+    # 4. Dinamica de las dos esteras (balance de masa; sin recorte superior)
     n[k], salida[k] = paso_estera(n[k-1], uk, r1, admision, dm, ls)
+\end{lstlisting}
+
+
+\begin{lstlisting}[language=Matlab,caption={Configuracion del sistema difuso para el controlador inteligente directo},label={lst:fis_control_directo}]
+fis = sugfis('Name','fis_control_directo');
+
+% Entrada e: 7 conjuntos, universo documentado en la Tabla 4.2
+fis = addInput(fis,[-1.5 1.5],'Name','e');
+e_names = {'NL','NM','NS','ZE','PS','PM','PL'};
+e_types = {'trapmf','trimf','trimf','trimf','trimf','trimf','trapmf'};
+e_params = {[-1.5 -1.5 -0.7 -0.4],[-0.6 -0.35 -0.12],[-0.22 -0.11 0], ...
+            [-0.07 0 0.07],[0 0.11 0.22],[0.12 0.35 0.6],[0.4 0.7 1.5 1.5]};
+for i = 1:numel(e_names)
+    fis = addMF(fis,'e',e_types{i},e_params{i},'Name',e_names{i});
+end
+
+% Entrada de: 5 conjuntos, universo documentado en la Tabla 4.2
+fis = addInput(fis,[-0.5 0.5],'Name','de');
+de_names = {'NB','NS','ZE','PS','PB'};
+de_types = {'trapmf','trimf','trimf','trimf','trapmf'};
+de_params = {[-0.5 -0.5 -0.22 -0.10],[-0.18 -0.08 0],[-0.05 0 0.05], ...
+             [0 0.08 0.18],[0.10 0.22 0.5 0.5]};
+for i = 1:numel(de_names)
+    fis = addMF(fis,'de',de_types{i},de_params{i},'Name',de_names{i});
+end
+
+% Entrada d: SIN/CON
+fis = addInput(fis,[0 1],'Name','d');
+fis = addMF(fis,'d','trapmf',[0 0 0.35 0.55],'Name','SIN');
+fis = addMF(fis,'d','trapmf',[0.35 0.55 1 1],'Name','CON');
+
+% Salida u_star con consecuentes singleton
+fis = addOutput(fis,[0.05 0.98],'Name','u_star');
+u_base = 0.60;
+e_level = [-3 -2 -1 0 1 2 3];
+de_level = [-2 -1 0 1 2];
+rules = [];
+out_idx = 1;
+for ie = 1:numel(e_level)
+    for ide = 1:numel(de_level)
+        c = min(max(u_base + 0.12*e_level(ie) + 0.05*de_level(ide),0.05),0.98);
+        fis = addMF(fis,'u_star','constant',c,'Name',sprintf('C%02d',out_idx));
+        rules = [rules; ie ide 0 out_idx 1 1];  % 0 = no importa
+        out_idx = out_idx + 1;
+    end
+end
+fis = addMF(fis,'u_star','constant',min(u_base + 0.30,0.98),'Name','PERT');
+rules = [rules; 0 0 2 out_idx 1 1];            % regla d=CON -> velocidad alta
+
+% Operadores de inferencia
+fis.AndMethod = 'min';
+fis.OrMethod = 'max';
+fis.DefuzzificationMethod = 'wtaver';
+
+fis = addRule(fis,rules);
+
+writeFIS(fis,'fis_control_directo.fis');
+fuzzyLogicDesigner(fis)
+\end{lstlisting}
+
+La función siguiente implementa únicamente la barrera dura de capacidad usada en el modelo de coordinación del Capítulo~\ref{ch:arquitectura} (Figura~5.16); los refuerzos de velocidad y los regímenes de riesgo/alarma de las ecuaciones del Capítulo~\ref{ch:supervisor} se implementan en \texttt{supervisor\_inteligente} (Listing~\ref{lst:supervisor_inteligente}) dentro del modelo supervisor del Capítulo~\ref{ch:supervisor}.
+
+\begin{lstlisting}[language=Matlab,caption={Funcion del supervisor de capacidad para la coordinacion R2ET},label={lst:supervisor_capacidad}]
+function [u1,u2,r1,alpha] = supervisor_capacidad(u1s,u2s,r1s,n1,n2,nmax)
+
+% Senales propuestas por el controlador primario
+u1 = u1s;
+u2 = u2s;
+r1 = r1s;
+alpha = 1;
+
+margen = 0.05;
+
+llena1 = n1 >= (nmax - margen);
+llena2 = n2 >= (nmax - margen);
+
+% Bloqueo de alimentacion hacia esteras llenas
+if llena1 && ~llena2
+    r1 = 0.20;
+end
+
+if llena2 && ~llena1
+    r1 = 0.80;
+end
+
+if llena1 && llena2
+    alpha = 0.72;
+    r1 = 0.5;
+end
+
+% Limites fisicos
+if r1 < 0.20
+    r1 = 0.20;
+elseif r1 > 0.80
+    r1 = 0.80;
+end
+
+if u1 < 0.05
+    u1 = 0.05;
+elseif u1 > 1
+    u1 = 1;
+end
+
+if u2 < 0.05
+    u2 = 0.05;
+elseif u2 > 1
+    u2 = 1;
+end
+
+end
+\end{lstlisting}
+
+\begin{lstlisting}[language=Matlab,caption={Funcion del supervisor inteligente para ajuste de ganancias, caudal y reparto},label={lst:supervisor_inteligente}]
+function [Kp,Ki,Kd,u_plus,alpha,r1,modo] = supervisor_inteligente(n1,n2,d,theta,nmax_lim)
+
+nmax = max(n1,n2);
+
+umbral_riesgo = 0.80*nmax_lim;
+umbral_alarma = 0.90*nmax_lim;
+umbral_lleno  = nmax_lim - 0.05;
+
+% Valores por defecto: modo normal
+Kp = 1.0;
+Ki = 1.0;
+Kd = 0.0;
+u_plus = 0.0;
+alpha = 1.0;
+modo = 0;
+
+% Seleccion del regimen de operacion
+if nmax > umbral_alarma
+    Kp = 1.55;
+    Ki = 0.65;
+    Kd = 0.0;
+    u_plus = 0.14;
+    alpha = 0.72;
+    modo = 2;
+
+elseif d > 0
+    Kp = 1.55;
+    Ki = 0.65;
+    Kd = 0.0;
+    u_plus = 0.14;
+    alpha = 0.86;
+    modo = 2;
+
+elseif nmax > umbral_riesgo
+    Kp = 1.25;
+    Ki = 0.82;
+    Kd = 0.0;
+    u_plus = 0.07;
+    alpha = 0.90;
+    modo = 1;
+
+else
+    Kp = 1.0;
+    Ki = 1.0;
+    Kd = 0.0;
+    u_plus = 0.0;
+    alpha = 1.0;
+    modo = 0;
+end
+
+% Reparto base del robot
+r1 = 0.5;
+
+if abs(theta) > 0.15
+    r1 = 0.5 + 0.8*theta;
+end
+
+% Barrera dura de capacidad
+if n1 >= umbral_lleno && n2 < umbral_lleno
+    r1 = 0.20;
+end
+
+if n2 >= umbral_lleno && n1 < umbral_lleno
+    r1 = 0.80;
+end
+
+if n1 >= umbral_lleno && n2 >= umbral_lleno
+    alpha = 0.72;
+    r1 = 0.5;
+end
+
+if r1 < 0.20
+    r1 = 0.20;
+elseif r1 > 0.80
+    r1 = 0.80;
+end
+
+end
+\end{lstlisting}
+
+\begin{lstlisting}[language=Matlab,caption={Funcion del PID local de ocupacion para las esteras R2ET},label={lst:pid_ocupacion}]
+function [u1,u2,e1,e2] = pid_ocupacion(n_ref,n1,n2,Kp,Ki,Kd,u_plus)
+
+persistent I1 I2 e1_ant e2_ant
+
+if isempty(I1)
+    I1 = 0;
+    I2 = 0;
+    e1_ant = 0;
+    e2_ant = 0;
+end
+
+Ts = 1;
+
+% Error de ocupacion respecto a la referencia
+e1 = n1 - n_ref;
+e2 = n2 - n_ref;
+
+I1 = I1 + e1*Ts;
+I2 = I2 + e2*Ts;
+
+de1 = (e1 - e1_ant)/Ts;
+de2 = (e2 - e2_ant)/Ts;
+
+u1_raw = Kp*e1 + Ki*I1 + Kd*de1 + u_plus;
+u2_raw = Kp*e2 + Ki*I2 + Kd*de2 + u_plus;
+
+u1 = u1_raw;
+u2 = u2_raw;
+
+if u1 < 0.05
+    u1 = 0.05;
+elseif u1 > 1
+    u1 = 1;
+end
+
+if u2 < 0.05
+    u2 = 0.05;
+elseif u2 > 1
+    u2 = 1;
+end
+
+e1_ant = e1;
+e2_ant = e2;
+
+end
 \end{lstlisting}

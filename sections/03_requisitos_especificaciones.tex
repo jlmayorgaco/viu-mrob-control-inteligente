@@ -1,18 +1,20 @@
-\chapter[4.1 Requisitos y especificaciones]{4.1 Análisis de requisitos y especificaciones técnicas}
+\chapter[Requisitos y especificaciones]{Análisis de requisitos y especificaciones técnicas}
 \label{ch:requisitos}
 
-Los requisitos se derivan de las restricciones físicas de la celda, los criterios de seguridad de la norma IEC~61511 y los objetivos de producción. El sistema de control prioriza en este orden: seguridad operativa (cero desbordamientos), estabilidad de la ocupación en torno al nivel objetivo, y eficiencia energética con máxima productividad.
+Correspondencia con la guía: apartado 4.1. Los requisitos se derivan de las restricciones físicas de la celda, los criterios de seguridad operativa y los objetivos de producción. El sistema de control prioriza en este orden: seguridad operativa (cero desbordamientos), estabilidad de la ocupación en torno al nivel objetivo, y eficiencia energética con máxima productividad.
 
-\section{4.1.a Requisitos funcionales y no funcionales}
+\section{Requisitos funcionales y no funcionales}
 
 \subsection*{Requisitos funcionales (RF)}
 
-\begin{longtable}{@{}P{0.11\linewidth}P{0.23\linewidth}P{0.55\linewidth}@{}}
+\begin{table}[H]
+\centering
+\small
 \caption{Requisitos funcionales del sistema de control inteligente R2ET.}
-\label{tab:req_func}\\
+\label{tab:req_func}
+\begin{tabular}{@{}P{0.11\linewidth}P{0.23\linewidth}P{0.55\linewidth}@{}}
 \toprule
-ID & Requisito & Descripción \\ \midrule \endfirsthead
-\toprule ID & Requisito & Descripción \\ \midrule \endhead
+ID & Requisito & Descripción \\ \midrule
 RF-01 & Regulación de nivel & Mantener $n_i(k) \approx n^* = 1.5$~piezas en ambas esteras ajustando $u_i(k)$.\\
 RF-02 & No desbordamiento & $n_i(k) \leq 3$~piezas en todo momento. Incumplimiento implica parada.\\
 RF-03 & No vaciado & $n_i(k) \geq 0.2$~piezas para garantizar flujo continuo de salida.\\
@@ -21,20 +23,23 @@ RF-05 & Rechazo de perturbación & Compensar el cambio de peso sin superar la al
 RF-06 & Control de admisión & Reducir $a(k)$ cuando $n_{max} > 2.4$~piezas.\\
 RF-07 & Seguimiento de referencia & Error estacionario $<5\%$ desde $n_i(0)=1.25$.\\
 RF-08 & Señalización & Activar alarma cuando $n_i > 2.7$ y registrar tiempo en zona de riesgo.\\
-RF-09 & Servoregulación local & Regular $y(k)$ ante escalón y perturbación en la planta de Fase~1.\\
+RF-09 & Servorregulación local & Regular $y(k)$ ante escalón y perturbación en la planta de Fase~1.\\
 RF-10 & Adaptación automática & Sin resintonización manual para perturbaciones dentro del rango de diseño.\\
 \bottomrule
-\end{longtable}
+\end{tabular}
+\end{table}
 
 \subsection*{Requisitos no funcionales (RNF)}
 
-\begin{longtable}{@{}P{0.11\linewidth}P{0.23\linewidth}P{0.55\linewidth}@{}}
+\begin{table}[H]
+\centering
+\small
 \caption{Requisitos no funcionales del sistema de control.}
-\label{tab:req_nofunc}\\
+\label{tab:req_nofunc}
+\begin{tabular}{@{}P{0.11\linewidth}P{0.23\linewidth}P{0.55\linewidth}@{}}
 \toprule
-ID & Requisito & Descripción \\ \midrule \endfirsthead
-\toprule ID & Requisito & Descripción \\ \midrule \endhead
-RNF-01 & Precisión & IAE (Fase~2) $<60$ en 160~muestras; error estacionario $<2\%$.\\
+ID & Requisito & Descripción \\ \midrule
+RNF-01 & Precisión & IAE (Fase~2) $<60$ en 160~muestras; error estacionario $<2\%$ para la estrategia seleccionada.\\
 RNF-02 & Adaptabilidad & Control efectivo ante $\pm20\%$ de variación en caudal de entrada.\\
 RNF-03 & Robustez & Cero violaciones en condiciones nominales y en escenario severo ($+20\%$~demanda, $-15\%$~salida).\\
 RNF-04 & Seguridad & El supervisor de capacidad es independiente del controlador primario y siempre activo.\\
@@ -43,20 +48,23 @@ RNF-06 & Mantenibilidad & Cada método (PID, Fuzzy, DL, QL) es intercambiable si
 RNF-07 & HMI & Panel de operador con $n_1$, $n_2$, alarmas y estado del robot en tiempo real.\\
 RNF-08 & Integración & Compatible con OPC~UA para conexión con SCADA/MES de nivel superior.\\
 RNF-09 & Tiempo de ciclo & Acción de control calculada dentro del ciclo de la celda R2ET ($1$~s).\\
-RNF-10 & Trazabilidad & Registro temporal de todas las variables para análisis post-mortem.\\
+RNF-10 & Trazabilidad & Registro temporal de todas las variables para análisis posterior de eventos.\\
 \bottomrule
-\end{longtable}
+\end{tabular}
+\end{table}
 
-\section{4.1.b Especificaciones técnicas del sistema de control}
+\section{Especificaciones técnicas del sistema de control}
 
 \subsection*{Variables de proceso y control}
 
-\begin{longtable}{@{}P{0.18\linewidth}P{0.13\linewidth}P{0.13\linewidth}P{0.44\linewidth}@{}}
+\begin{table}[H]
+\centering
+\small
 \caption{Variables de proceso y de control del sistema R2ET.}
-\label{tab:var_proceso}\\
+\label{tab:var_proceso}
+\begin{tabular}{@{}P{0.18\linewidth}P{0.13\linewidth}P{0.13\linewidth}P{0.44\linewidth}@{}}
 \toprule
-Variable & Rango & Unidad & Descripción \\ \midrule \endfirsthead
-\toprule Variable & Rango & Unidad & Descripción \\ \midrule \endhead
+Variable & Rango & Unidad & Descripción \\ \midrule
 \multicolumn{4}{@{}l}{\textit{Variables de proceso (medidas)}} \\ \midrule
 $n_1(k)$ & $[0,\;3]$ & piezas & Nivel de llenado estera E1\\
 $n_2(k)$ & $[0,\;3]$ & piezas & Nivel de llenado estera E2\\
@@ -70,16 +78,19 @@ $u_2(k)$ & $[0.05,\;1.0]$ & norm. & Velocidad de descarga E2\\
 $r_1(k)$ & $[0.20,\;0.80]$ & fracción & Fracción del robot hacia E1 ($r_2=1-r_1$)\\
 $a(k)$ & $[0.72,\;1.0]$ & fracción & Factor de admisión de nuevas piezas\\
 \bottomrule
-\end{longtable}
+\end{tabular}
+\end{table}
 
 \subsection*{Parámetros operativos}
 
-\begin{longtable}{@{}P{0.30\linewidth}P{0.15\linewidth}P{0.43\linewidth}@{}}
+\begin{table}[H]
+\centering
+\small
 \caption{Parámetros operativos y su justificación.}
-\label{tab:params_op}\\
+\label{tab:params_op}
+\begin{tabular}{@{}P{0.30\linewidth}P{0.15\linewidth}P{0.43\linewidth}@{}}
 \toprule
-Parámetro & Valor & Justificación \\ \midrule \endfirsthead
-\toprule Parámetro & Valor & Justificación \\ \midrule \endhead
+Parámetro & Valor & Justificación \\ \midrule
 Nivel objetivo $n^*$ & 1.5~piezas & 50\% de la capacidad: centra la operación con margen en ambos sentidos.\\
 Capacidad $N_{max}$ & 3~piezas & Restricción física de la longitud de la estera.\\
 Velocidad nominal $u_{ss}$ & 0.457~(norm.) & Equilibrio entrada-salida en condición de caudal base.\\
@@ -89,7 +100,8 @@ Pérdida E1 por atasco & 35\% & Reducción de descarga con piezas pesadas en E1.
 Pérdida E2 por atasco & 17.5\% & Menor impacto por posición diferente en E2.\\
 Período de muestreo & 1~muestra & Ciclo de control digital.\\
 \bottomrule
-\end{longtable}
+\end{tabular}
+\end{table}
 
 \subsection*{Restricciones técnicas}
 
@@ -105,12 +117,14 @@ Las restricciones se ordenan por dureza:
 
 \subsection*{Variables de monitoreo e indicadores de desempeño objetivo}
 
-\begin{longtable}{@{}P{0.30\linewidth}P{0.20\linewidth}P{0.38\linewidth}@{}}
+\begin{table}[H]
+\centering
+\small
 \caption{Objetivos cuantitativos de desempeño.}
-\label{tab:obj_desempeno}\\
+\label{tab:obj_desempeno}
+\begin{tabular}{@{}P{0.30\linewidth}P{0.20\linewidth}P{0.38\linewidth}@{}}
 \toprule
-Indicador & Objetivo & Criterio de aceptación \\ \midrule \endfirsthead
-\toprule Indicador & Objetivo & Criterio \\ \midrule \endhead
+Indicador & Objetivo & Criterio de aceptación \\ \midrule
 Violaciones de capacidad & 0 & Condición absoluta.\\
 Tiempo en alarma ($n_i>2.7$) & 0~muestras & Deseable; tolerable $\leq 2$.\\
 IAE Fase~2 (160~muestras) & $<60$ & Suma de errores de ambas esteras.\\
@@ -120,4 +134,5 @@ Recuperación post-atasco & $<15$~muestras & Para salir de la zona de riesgo.\\
 Productividad acumulada & $>60$~piezas & Caudal total de salida en 160~muestras.\\
 Desbalance medio & $<0.5$~piezas & Media de $|n_1(k)-n_2(k)|$.\\
 \bottomrule
-\end{longtable}
+\end{tabular}
+\end{table}

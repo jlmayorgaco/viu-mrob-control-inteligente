@@ -1,9 +1,9 @@
-\chapter[4.2.a--b Diseño del control inteligente]{4.2.a--b Diseño del sistema de control inteligente}
+\chapter[Diseño del control inteligente]{Diseño del sistema de control inteligente}
 \label{ch:diseno}
 
-\section{4.2.a Selección y justificación de la estrategia de control}
+\section{Selección y justificación de la estrategia de control}
 
-El sistema R2ET reúne tres rasgos incómodos para un control clásico: una no linealidad leve (la saturación del actuador), perturbaciones de amplitud conocida pero duración variable, y dos variables de proceso acopladas por el reparto del robot. Nada de esto impide usar un PID. Lo que hace es limitar su techo, porque un PID no coordina esteras por sí mismo ni reajusta sus parámetros cuando cambia el peso. De ahí que, junto al PID de referencia, se evalúen tres alternativas inteligentes.
+Correspondencia con la guía: apartados 4.2.a y 4.2.b. El sistema R2ET presenta tres características que dificultan el control clásico: una no linealidad leve (la saturación del actuador), perturbaciones de amplitud conocida pero duración variable, y dos variables de proceso acopladas por el reparto del robot. Estas características no impiden emplear un PID, pero sí acotan las prestaciones que puede alcanzar, porque un PID no coordina esteras por sí mismo ni reajusta sus parámetros cuando cambia el peso. De ahí que, junto al PID de referencia, se evalúen tres alternativas inteligentes.
 
 \begin{longtable}{@{}P{0.12\linewidth}P{0.22\linewidth}P{0.55\linewidth}@{}}
 \caption{Justificación de cada método de control para el sistema R2ET.}
@@ -11,16 +11,20 @@ El sistema R2ET reúne tres rasgos incómodos para un control clásico: una no l
 \toprule
 Método & Tipo & Justificación para R2ET \\ \midrule \endfirsthead
 \toprule Método & Tipo & Justificación \\ \midrule \endhead
-PID & Clásico: referencia & Elimina el error estacionario por acción integral. Bien conocido, fácil de auditar y mantener. Limitación: un PID escalar por estera no coordina el reparto del robot ni adapta parámetros ante la perturbación de peso.\\[4pt]
+PID & Clásico: referencia & Elimina el error estacionario por acción integral. Es un método bien conocido, fácil de auditar y de mantener. Limitación: un PID escalar por estera no coordina el reparto del robot ni adapta parámetros ante la perturbación de peso.\\[4pt]
 Fuzzy & Reglas lingüísticas & Las reglas Mamdani son auditables sin conocimiento de sistemas de control avanzados. No necesita datos históricos de la planta. Incorpora directamente el conocimiento de un experto sobre cuándo acelerar, frenar o redirigir el robot \cite{ross2010fuzzy,kasabov1996foundations}.\\[4pt]
-Deep Learning & Optimización directa sobre planta & Entrena la política minimizando el IAE directamente sobre la planta mediante el método adjunto (co-estado). No requiere controlador externo de referencia. La inferencia en despliegue es de coste computacional fijo por ciclo \cite{reinoso2022redes}.\\[4pt]
+Deep Learning & Optimización directa sobre planta & Entrena la política \emph{offline} sobre el gemelo digital, minimizando el IAE mediante retropropagación a través de la simulación discreta. La inferencia en despliegue es de coste computacional fijo por ciclo \cite{reinoso2022redes}.\\[4pt]
 Q-Learning & Refuerzo tabular & Aprende la política por interacción con el entorno, sin modelo de la planta. Puede continuar actualizando la tabla durante la operación (aprendizaje en línea). Es el método más adecuado cuando la eficiencia energética es el criterio dominante \cite{sutton2018reinforcement}.\\
 \bottomrule
 \end{longtable}
 
-Cada método gana en un terreno distinto. El difuso es el más indicado para un despliegue auditable, porque sus 35~reglas las lee y las retoca el personal de planta sin herramientas de aprendizaje automático. El PID retuneado, en cambio, marca el menor IAE de la coordinación de dos esteras. El Q-Learning se lleva la eficiencia energética y la robustez. Y la red profunda combina lo mejor de ambos mundos: el mejor compromiso del lazo servo (IAE la mitad que el PID en Fase~1, con el mando más suave y sin saturar) y, en la coordinación, el mayor margen de seguridad y productividad.
+Para la propuesta de control inteligente se selecciona el controlador difuso Mamdani integrado con el supervisor de capacidad. La decisión prioriza una primera implantación industrial: sus 35~reglas son auditables, no requiere datos históricos y permite al personal de planta ajustar la lógica sin herramientas de aprendizaje automático. El PID queda como línea base y respaldo industrial; Deep Learning y Q-Learning se incluyen como comparación avanzada y como alternativas para validación en gemelo digital o modo sombra.
 
-\section{4.2.b Variables, universos de discurso y señales de retroalimentación}
+La comparación cuantitativa acota el papel de cada alternativa. El PID resintonizado marca el menor IAE de la coordinación de dos esteras. El Q-Learning obtiene el menor consumo energético y la mejor robustez en el escenario severo. La red profunda combina IAE bajo en el lazo servo con mayor margen de seguridad y productividad en Fase~2.
+
+En las tablas y títulos se conserva la etiqueta \emph{aware} para las configuraciones que usan el estado completo de la celda (ocupación de ambas esteras, reparto del robot, admisión y perturbación). En el texto equivale a coordinación consciente del estado de la celda.
+
+\section{Variables, universos de discurso y señales de retroalimentación}
 
 \subsection*{Variables lingüísticas}
 
@@ -31,16 +35,16 @@ Cada método gana en un terreno distinto. El difuso es el más indicado para un 
 Variable & Universo & Etiquetas & Uso \\ \midrule \endfirsthead
 \toprule Variable & Universo & Etiquetas & Uso \\ \midrule \endhead
 \multicolumn{4}{@{}l}{\textit{Entradas}} \\ \midrule
-$e = r - y$ (servo) & $[-1.0,\;1.0]$ & NL, NM, NS, ZE, PS, PM, PL & Error de seguimiento en Fase~1\\
+$e = r - y$ (servo) & $[-1.5,\;1.5]$ & NL, NM, NS, ZE, PS, PM, PL & Error de seguimiento en Fase~1\\
 $e_i = n_i - n^*$ & $[-1.5,\;1.5]$~piezas & NL, NM, NS, ZE, PS, PM, PL & Error de ocupación de estera $i$\\
 $\Delta e$ & $[-0.5,\;0.5]$ & NB, NS, ZE, PS, PB & Tendencia del error\\
 $d$ & $[0,\;1]$ & SIN, CON & Cambio de peso activo\\
 $b = n_1 - n_2$ & $[-2.0,\;2.0]$~piezas & E1-pesada, Balanceada, E2-pesada & Desequilibrio entre esteras\\
 \midrule
 \multicolumn{4}{@{}l}{\textit{Salidas}} \\ \midrule
-$u_i$ & $[0.05,\;0.98]$~(norm.) & 7 niveles (FAM por nivel de error/derivada) & Velocidad de descarga de estera $i$\\
+$u_i$ & $[0.05,\;0.98]$\newline(norm.) & 7 niveles (FAM por nivel de error/derivada) & Velocidad de descarga de estera $i$\\
 $r_1$ & $[0.20,\;0.80]$\newline(fracción) & Bajo, Medio, Alto & Fracción del robot hacia E1\\
-$a$ & $[0.72,\;1.00]$\newline(fracción) & — & Admisión (gestionada por supervisor)\\
+$a$ & $[0.72,\;1.00]$\newline(fracción) & -- & Admisión (gestionada por supervisor)\\
 \bottomrule
 \end{longtable}
 
@@ -56,7 +60,7 @@ Fase~2: niveles $n_1(k)$ y $n_2(k)$ medidos por sensores de presencia de piezas,
 u(k) = u_{ff} + K_p\,e(k) + K_i\,\sigma(k) + K_d\,\Delta e(k)
 \]
 
-La integral $\sigma(k)$ usa anti-windup condicional: sólo se actualiza cuando el actuador no está saturado en la misma dirección que el error:
+La integral $\sigma(k)$ usa anti-windup condicional: solo se actualiza cuando el actuador no está saturado en la misma dirección que el error:
 \[
 \sigma(k+1) = \operatorname{sat}_{[-\sigma_{max},\,\sigma_{max}]}\!\bigl(\sigma(k) + e(k)\bigr)
 \quad\text{si }u(k)\text{ no satura en sentido de }e
@@ -72,16 +76,16 @@ Fase~2: $K_p=1.3$, $K_i=0.18$, $K_d=0.28$, $u_{ff}=u_{ss}=0.457$. El supervisor 
 
 La base de conocimiento del controlador difuso tiene dos componentes \cite[cap.~5]{passino2005biomimicry}:
 \begin{itemize}
-  \item Base de datos: las variables lingüísticas, sus universos de discurso y las funciones de pertenencia (Tabla~\ref{tab:variables_ling} y la estrategia de fuzzificación siguiente).
+  \item Base de datos: las variables lingüísticas, sus universos de discurso y las funciones de membresía de la Tabla~\ref{tab:variables_ling} y la estrategia de fuzzificación siguiente.
   \item Base de reglas: las 35 reglas $(e,\Delta e)\!\to\!u$ más la regla de perturbación, codificadas como matriz asociativa difusa (FAM, Tabla~\ref{tab:reglas_fuzzy}).
 \end{itemize}
 Sobre esta base, el motor de inferencia aplica la conjunción AND~=~mínimo y la defuzzificación convierte el grado de activación de las reglas en la velocidad de mando. Los tres pasos (fuzzificación, inferencia, defuzzificación) se detallan a continuación.
 
 \subsection*{Estrategia de fuzzificación: funciones de membresía}
 
-\artifactfigure{figures/plots/fig_fuzzy_mf.png}{0.96}{Funciones de pertenencia: error $e$ (7~conjuntos triangulares/trapezoidales), derivada $\Delta e$ (5~conjuntos), perturbación $d$ (2~conjuntos) y velocidad de salida por nivel de error para Fase~1 y Fase~2.}
+\artifactfigure{figures/plots/fig_fuzzy_mf.png}{0.96}{Funciones de membresía: error $e$ (7~conjuntos triangulares/trapezoidales), derivada $\Delta e$ (5~conjuntos), perturbación $d$ (2~conjuntos) y velocidad de salida por nivel de error para Fase~1 y Fase~2.}
 
-Se emplean 7 conjuntos para el error (resolución densa cerca de cero) y 5 para la derivada, lo que da una base de 35 reglas (frente a las 15 de una partición $5\times3$) y un control más fino cerca del punto de operación. El diseño de las funciones de pertenencia, la inferencia y la defuzzificación sigue el procedimiento estándar de control basado en reglas \cite[cap.~5]{passino2005biomimicry}, \cite{ross2010fuzzy}.
+Se emplean 7 conjuntos para el error (resolución densa cerca de cero) y 5 para la derivada, lo que da una base de 35 reglas (frente a las 15 de una partición $5\times3$) y un control más fino cerca del punto de operación. El diseño de las funciones de membresía, la inferencia y la defuzzificación sigue el procedimiento estándar de control basado en reglas \cite[cap.~5]{passino2005biomimicry}, \cite{ross2010fuzzy}.
 
 Nomenclatura de las etiquetas. Cada etiqueta lingüística combina el signo del valor con su magnitud, según la convención habitual en control difuso: el prefijo es el signo (N~=~negativo, P~=~positivo) y el sufijo la magnitud (S~=~pequeña, \emph{small}; M~=~media, \emph{medium}; L/B~=~grande, \emph{large}/\emph{big}); ZE es el conjunto centrado en cero. Así, para el error: NL/NM/NS son negativo grande/medio/pequeño, ZE es cero y PS/PM/PL son positivo pequeño/medio/grande; para la derivada, NB y PB son negativo y positivo grandes. El significado físico es directo: un error PL (estera muy por encima del objetivo $n^*$) pide mayor velocidad de descarga, mientras que un error NL (estera casi vacía) pide frenarla; la derivada $\Delta e$ matiza esa acción según la tendencia del nivel.
 
@@ -124,7 +128,7 @@ PL & 0.86 & 0.91 & 0.96 & 0.98 & 0.98 \\
 \bottomrule
 \end{longtable}
 
-Regla de perturbación: SI $d=\text{CON}$ ENTONCES $u=u_{base}+0.30$, con intensidad $\mu_{CON}(d)$, activa sólo cuando $d>0.35$ (umbral de la MF trapecial). Se combina en paralelo con las 35 reglas en el promedio ponderado, reforzando la descarga ante el atasco sin interferir con el régimen nominal.
+Regla de perturbación: SI $d=\text{CON}$ ENTONCES $u=u_{base}+0.30$, con intensidad $\mu_{CON}(d)$, activa solo cuando $d>0.35$ (umbral de la MF trapecial). Se combina en paralelo con las 35 reglas en el promedio ponderado, reforzando la descarga ante el atasco sin interferir con el régimen nominal.
 
 La inferencia usa AND = mínimo (intersección de Zadeh): el grado de activación de cada regla queda limitado por la premisa más débil \cite[cap.~5]{passino2005biomimicry}.
 
@@ -138,7 +142,7 @@ donde $w_j$ es la activación de cada regla y $\varepsilon=10^{-9}$ evita la div
 
 \section{Red neuronal profunda (Deep Learning)}
 
-La red es un perceptrón multicapa que actúa como aproximador no lineal de la política de control \cite[cap.~4]{passino2005biomimicry}. Ambas redes se entrenan por optimización directa de política sobre la planta: la red minimiza el IAE directamente sobre la dinámica del sistema sin ningún controlador externo de referencia. El mecanismo de entrenamiento es el método adjunto (co-estado discreto), que calcula el gradiente del IAE respecto a los pesos de la red propagando el error a través de la dinámica de la planta hacia atrás en el tiempo.
+La red es un perceptrón multicapa que actúa como aproximador no lineal de la política de control \cite[cap.~4]{passino2005biomimicry}. Ambas redes se entrenan \emph{offline} sobre el gemelo digital de la planta: la pérdida combina IAE y penalización de suavidad, y su gradiente se obtiene propagando el error a través de la simulación discreta. En las ecuaciones siguientes se presenta el método adjunto discreto usado para calcular ese gradiente de forma explícita.
 
 \subsection*{Método adjunto (fundamento teórico)}
 
@@ -150,25 +154,29 @@ Dado el sistema $y(k+1)=A\,y(k)+B\,u(k)$ y la pérdida IAE $L=\sum|y(k)-r|$, el 
 \frac{\partial L}{\partial u(k)} &= B\,\lambda(k+1) \label{eq:grad_u}
 \end{align}
 
-Este gradiente se retropropaga luego a través de la red (backprop estándar) y los pesos se actualizan con Adam con cosine LR annealing.
+Este gradiente se retropropaga luego a través de la red (retropropagación estándar) y los pesos se actualizan con Adam con planificación coseno de la tasa de aprendizaje (\emph{cosine annealing}).
 
-Intuición. Cada acción $u(k)$ no afecta solo al error de ese instante: arrastra toda la trayectoria posterior de $y$. Derivar muestra a muestra, por tanto, no basta. El co-estado $\lambda(k)$ resume justo eso, cuánto pesa el estado del instante $k$ en el error acumulado hasta el final del episodio. El cálculo va en tres pasos:
+Interpretación física. Cada acción $u(k)$ no afecta solo al error de ese instante: arrastra toda la trayectoria posterior de $y$. Derivar muestra a muestra, por tanto, no basta. El co-estado $\lambda(k)$ resume cuánto pesa el estado del instante $k$ en el error acumulado hasta el final del episodio. El cálculo va en tres pasos:
 \begin{enumerate}
   \item Pasada hacia adelante: se simula el episodio completo con la red actual y se guardan $y(k)$, $u(k)$ y las activaciones de la red.
-  \item Pasada hacia atrás: se parte de $\lambda(T)$ (el error en el instante final) y se recorre el tiempo en sentido inverso; en cada paso se suma el error local más la contribución que llega del futuro, $A\,\lambda(k+1)$. Es la misma idea de \emph{backpropagation through time}.
-  \item Gradiente: $\partial L/\partial u(k)=B\,\lambda(k+1)$ indica cómo mover cada acción para reducir el IAE; ese valor se inyecta como error en la capa de salida de la red y se retropropaga con backprop estándar.
+  \item Pasada hacia atrás: se parte de $\lambda(T)$ (el error en el instante final) y se recorre el tiempo en sentido inverso; en cada paso se suma el error local más la contribución que llega del futuro, $A\,\lambda(k+1)$. Es la misma idea de la retropropagación a través del tiempo (\emph{backpropagation through time}).
+  \item Gradiente: $\partial L/\partial u(k)=B\,\lambda(k+1)$ indica cómo mover cada acción para reducir el IAE; ese valor se inyecta como error en la capa de salida de la red y se retropropaga con retropropagación estándar.
 \end{enumerate}
-En la práctica equivale a derivar la simulación completa respecto a las acciones de la red. No hace falta un controlador que le indique la ``respuesta correcta'': la red aprende directamente de cuánto error produce sobre la planta.
+En la práctica equivale a derivar la simulación completa respecto a las acciones de la red. La señal de aprendizaje no proviene de una política supervisora externa, sino del error acumulado que la propia política produce sobre la planta simulada.
 
-\subsection*{Fase~1: Servoregulador}
+\subsection*{Fase~1: Servorregulador}
 
-Estado de entrada: $[e,\;\Delta e,\;\sigma,\;d]$ con $\sigma(k)=\sum_{j=0}^{k}e(j)$ (integral acumulada). La integral distingue error estacionario acumulado de estado puro; sin ella la red no puede eliminar el offset. Arquitectura: $4\!\to\!64\!\to\!32\!\to\!16\!\to\!8\!\to\!1$ (sigmoide en salida). Entrenamiento: 800~épocas × $B=32$ escenarios aleatorios ($y_0\sim U(0,0.4)$, perturbación aleatoria). Pérdida: $L=\text{IAE}+\lambda_u\sum|\Delta u|^2$, con $\lambda_u=0.01$ para penalizar cambios bruscos del mando.
+Estado de entrada: $[e,\;\Delta e,\;\sigma,\;d]$ con $\sigma(k)=\sum_{j=0}^{k}e(j)$ (integral acumulada). La integral distingue error estacionario acumulado de estado puro; sin ella la red no puede eliminar el offset. Arquitectura: $4\!\to\!64\!\to\!32\!\to\!16\!\to\!8\!\to\!1$ (sigmoide en salida). Entrenamiento: 800~épocas $\times$ $B=32$ escenarios aleatorios ($y_0\sim U(0,0.4)$, perturbación aleatoria). Pérdida: $L=\text{IAE}+\lambda_u\sum|\Delta u|^2$, con $\lambda_u=0.01$ para penalizar cambios bruscos del mando.
 
 \subsection*{Fase~2: Coordinación aware}
 
-El mismo principio adjunto se extiende a la planta R2ET de dos esteras. Estado: $[e_1,\,e_2,\,\Delta e_1,\,\Delta e_2,\,\sigma_1,\,\sigma_2,\,b,\,d]$ (8 entradas). Arquitectura más profunda que en el servo, $8\!\to\!96\!\to\!64\!\to\!32\!\to\!16\!\to\!8\!\to\!3$ (tres salidas sigmoide: $u_1$, $u_2$, $r_1$), por la mayor complejidad del problema de dos esteras. El co-estado se calcula para cada estera por separado ($\lambda_1$, $\lambda_2$) y el gradiente respecto a $r_1$ incorpora el efecto del reparto sobre la alimentación de cada estera. Entrenamiento: 1200~épocas × $B=16$ escenarios ($n_0\sim U(0.4,2.6)$, atasco aleatorio con probabilidad $0.55$, demanda $\pm15\%$).
+El mismo principio adjunto se extiende a la planta R2ET de dos esteras. El estado tiene 8 entradas:
+\[
+x(k)=\big[e_1,\,e_2,\,\Delta e_1,\,\Delta e_2,\,\sigma_1,\,\sigma_2,\,b,\,d\big].
+\]
+La arquitectura es más profunda que en el servo, $8\!\to\!96\!\to\!64\!\to\!32\!\to\!16\!\to\!8\!\to\!3$ (tres salidas sigmoide: $u_1$, $u_2$, $r_1$), por la mayor complejidad del problema de dos esteras. El co-estado se calcula para cada estera por separado ($\lambda_1$, $\lambda_2$) y el gradiente respecto a $r_1$ incorpora el efecto del reparto sobre la alimentación de cada estera. Entrenamiento: 1200~épocas $\times$ $B=16$ escenarios ($n_0\sim U(0.4,2.6)$, atasco aleatorio con probabilidad $0.55$, demanda $\pm15\%$).
 
-\artifactfigure{figures/plots/fig_dl_training.png}{0.90}{Curvas de entrenamiento. Izq.: Fase~1 servo: IAE normalizado por optimización directa (método adjunto, 800~épocas × 32~escenarios). Der.: Fase~2 aware: IAE normalizado por método adjunto de dos esteras (1200~épocas × 16~escenarios). Escala logarítmica.}
+\artifactfigure{figures/plots/fig_dl_training.png}{0.90}{Curvas de entrenamiento. Izq.: Fase~1 servo: IAE normalizado por optimización directa (método adjunto, 800~épocas $\times$ 32~escenarios). Der.: Fase~2 aware: IAE normalizado por método adjunto de dos esteras (1200~épocas $\times$ 16~escenarios). Escala logarítmica.}
 
 \input{artifacts/tables/mlp_training_summary.tex}
 
@@ -176,21 +184,23 @@ El mismo principio adjunto se extiende a la planta R2ET de dos esteras. Estado: 
 
 La red DL produce salidas continuas $u\in[0.05,\,1.0]$ (velocidad de actuador), por lo que actúa como regresor, no como clasificador. Las métricas propias de clasificación (AUC-ROC, precisión, sensibilidad, F1-score, matrices de confusión) no aplican: requieren etiquetas binarias y probabilidades de clase, que no existen aquí. Los indicadores correctos para un regresor de control son:
 
-\begin{longtable}{@{}P{0.28\linewidth}P{0.30\linewidth}P{0.30\linewidth}@{}}
+\begin{table}[H]
+\centering
 \caption{Métricas de aprendizaje aplicadas a la red de control.}
-\label{tab:ml_metrics}\\
+\label{tab:ml_metrics}
+\begin{tabular}{@{}P{0.28\linewidth}P{0.30\linewidth}P{0.30\linewidth}@{}}
 \toprule
-Métrica & Servo ($4{\to}1$) & Aware ($8{\to}3$) \\ \midrule \endfirsthead
-\toprule Métrica & Servo & Aware \\ \midrule \endhead
-$L_{train}$ (IAE normaliz.) & 0.00406 & 0.205 \\
-$L_{val}$ (IAE normaliz.)   & 0.00432 & 0.173 \\
-Brecha de generalización $\Delta_{gen}$ & $\mathbf{6.4\%}$ & $-15.6\%$ \\
+Métrica & Servo ($4{\to}1$) & Aware ($8{\to}3$) \\ \midrule
+$L_{train}$ (IAE normaliz.) & 0.00406 & 0.199 \\
+$L_{val}$ (IAE normaliz.)   & 0.00432 & 0.175 \\
+Brecha de generalización $\Delta_{gen}$ & $\mathbf{6.4\%}$ & $-12.1\%$ \\
 Veredicto sobreajuste & Sin sobreajuste & Sin sobreajuste ($L_{val}<L_{train}$) \\
 Épocas hasta convergencia & $\approx 600$ de 800 & $\approx 1000$ de 1200 \\
 Inicialización & He (\texttt{sqrt(2/fan\_in)}) & He (\texttt{sqrt(2/fan\_in)}) \\
-Optimizador & Adam, LR cosine & Adam, LR cosine \\
+Optimizador & Adam, coseno LR & Adam, coseno LR \\
 \bottomrule
-\end{longtable}
+\end{tabular}
+\end{table}
 
 La brecha de generalización $\Delta_{gen}=\left(L_{val}-L_{train}\right)/L_{train}$ mide si la red memoriza los escenarios de entrenamiento en lugar de aprender la política general. Un valor $<5\%$ indica generalización excelente; entre $5\%$-$20\%$ es aceptable; $>30\%$ indica sobreajuste severo. Para la Fase~1, $\Delta_{gen}=6.4\%$: la red generaliza bien a escenarios no vistos (dentro del rango aceptable). Para la Fase~2, $\Delta_{gen}$ es \emph{negativo} ($L_{val}<L_{train}$): no hay sobreajuste, y la red profunda con 1200~épocas generaliza bien al conjunto de validación.
 
@@ -205,8 +215,8 @@ Durante el entrenamiento, $\varepsilon$ decae linealmente de $\varepsilon_0$ a $
 
 El espacio de estados se discretiza de forma no uniforme con mayor resolución cerca del objetivo:
 \begin{itemize}
-  \item Servo: $s=(e_{bin},\,\Delta e_{bin},\,d_{bin})$ → $10\times5\times2=100$ estados; 8~acciones de velocidad discreta.
-  \item Aware: $s=(n_{1,bin},\,n_{2,bin},\,d_{bin})$ → $9\times9\times2=162$ estados; 11~combinaciones de $(u,\,r_1,\,a)$.
+  \item Servo: $s=(e_{bin},\,\Delta e_{bin},\,d_{bin})$ $\rightarrow$ $10\times5\times2=100$ estados; 8~acciones de velocidad discreta.
+  \item Aware: $s=(n_{1,bin},\,n_{2,bin},\,d_{bin})$ $\rightarrow$ $9\times9\times2=162$ estados; 11~combinaciones de $(u,\,r_1,\,a)$.
 \end{itemize}
 
 La recompensa es negativa (un coste que el agente aprende a minimizar) y suma varios términos, cada uno con un peso que fija su importancia relativa:
@@ -216,7 +226,7 @@ r_{servo} = \underbrace{-|e|}_{\text{error}} \underbrace{-\,0.3\,e^2}_{\text{pen
 \[
 r_{aware} = \underbrace{-1.5\,\text{IAE}}_{\text{seguir }n^*} \underbrace{-\,30\,\text{viol.}}_{\text{nunca desbordar}} \underbrace{-\,8\,\text{alarma}}_{\text{evitar zona crítica}} \underbrace{-\,0.20\,|n_1-n_2|}_{\text{equilibrar esteras}}
 \]
-Los pesos altos de \emph{viol.} y \emph{alarma} (30 y 8) hacen que el agente aprenda, ante todo, a no superar la capacidad; el resto afina el seguimiento y el equilibrio.
+Los pesos altos de \emph{viol.} y \emph{alarma} (30 y 8) hacen que el agente priorice no superar la capacidad; el resto afina el seguimiento y el equilibrio.
 
 \artifactfigure{figures/plots/fig_ql_training.png}{0.90}{Recompensa media por episodio (suavizada) y decaimiento de $\varepsilon$ durante el entrenamiento Q-Learning: servo (izq.) y aware (der.).}
 
@@ -235,7 +245,7 @@ Métrica & Servo & Aware \\ \midrule \endfirsthead
 Recompensa media últimos 30~ep. & $-0.038$ & $-0.280$ \\
 $\varepsilon$ final (exploración residual) & 0.02 & 0.02 \\
 Episodios hasta convergencia estable & $\approx400$ de 600 & $\approx2000$ de 3000 \\
-IAE de despliegue (greedy, $\varepsilon=0$) & 1.80 & 25.75 \\
+IAE de despliegue (greedy, $\varepsilon=0$) & 1.80 & 26.13 \\
 Fracción de estados visitados ($\geq1$ vez) & $\approx85\%$ & $\approx78\%$ \\
 \bottomrule
 \end{longtable}
@@ -244,4 +254,4 @@ Convergencia. La recompensa media de $-0.038$ para el servo indica baja penaliza
 
 Sensibilidad a hiperparámetros. El parámetro crítico del Q-Learning es el factor de descuento $\gamma$: valores altos ($\gamma\to1$) priorizan recompensas futuras, necesario para un sistema de control donde el objetivo es el comportamiento sostenido. Con $\gamma=0.95$ (servo) y $\gamma=0.92$ (aware), la política da más peso a los próximos 20 y 12~pasos respectivamente, que corresponden aproximadamente al tiempo de establecimiento del sistema. La tasa $\alpha$ controla la velocidad de actualización: $\alpha=0.15$--$0.18$ es un compromiso entre velocidad de convergencia y estabilidad de la tabla Q.
 
-Comparación con métricas de clasificación. Si se quisiera interpretar la política QL como clasificador binario (``¿evita alarma sí/no?''), la tasa de éxito sería del $100\%$ (cero alarmas en el despliegue), lo que daría AUC=1.0 y sensibilidad=1.0. Sin embargo, este cálculo no aporta información útil porque la capacidad del supervisor garantiza ese resultado con independencia del controlador. La métrica discriminante real es el IAE de despliegue.
+Comparación con métricas de clasificación. Si se quisiera interpretar la política QL como clasificador binario (``¿evita alarma sí/no?''), la tasa de éxito sería del $100\%$ (cero alarmas en el despliegue), lo que daría AUC=1.0 y sensibilidad=1.0. Sin embargo, este cálculo no aporta información útil porque la capa de capacidad impone ese resultado antes de que la política primaria marque diferencias. La métrica discriminante real es el IAE de despliegue.

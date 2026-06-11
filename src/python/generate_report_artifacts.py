@@ -633,7 +633,7 @@ def plot_fuzzy_memberships():
     ax.set_ylabel("Velocidad normalizada"); ax.set_title("Singletons de salida")
     ax.legend(fontsize=8); ax.set_ylim(0, 1.05)
 
-    fig.suptitle("Funciones de pertenencia del controlador difuso Mamdani", fontsize=10, fontweight="bold")
+    fig.suptitle("Funciones de membresía — Controlador Difuso Mamdani", fontsize=10, fontweight="bold")
     fig.tight_layout(); _sv(fig, "fig_fuzzy_mf.png")
 
 
@@ -667,8 +667,8 @@ def plot_dl_training(h_servo: dict, h_aware: dict):
     for ax, h, t in zip(axes, [h_servo, h_aware],
                          ["DL Servo (3-64-32-16-8-1, Adam)", "DL Aware (6-64-32-16-8-3, Adam)"]):
         ax.plot(h["train"], color="#2563EB", lw=1.4, label="Entrenamiento")
-        ax.plot(h["val"],   color="#DC2626", lw=1.4, ls="--", label="Validacion")
-        ax.set_xlabel("Epoca"); ax.set_ylabel("MSE"); ax.set_title(t)
+        ax.plot(h["val"],   color="#DC2626", lw=1.4, ls="--", label="Validación")
+        ax.set_xlabel("Época"); ax.set_ylabel("MSE"); ax.set_title(t)
         ax.set_yscale("log"); ax.legend(fontsize=8)
     fig.tight_layout(); _sv(fig, "fig_dl_training.png")
 
