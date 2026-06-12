@@ -1,0 +1,19 @@
+% Tabla de resultados - Act08 R2ET
+\begin{table}[H]
+\centering
+\caption{Indicadores Fase~1 (servorregulador, 4 métodos).}
+\label{tab:servo_metrics}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+Método & IAE & Mp \% & $t_s$ & Recup. & Energía & $\sum|\Delta u|$ & $u_{max}$ \\
+\midrule
+PID & 3.89 & 0 & 16 & 0 & 95.39 & 3.116 & 1 \\
+Fuzzy & 5.97 & 0 & 19 & 12 & 90.12 & 1.854 & 0.816 \\
+DL & 1.903 & 0 & 10 & 3 & 92.79 & 1.65 & 0.863 \\
+QL & 1.803 & 0 & 10 & 0 & 94.45 & 7.1 & 1 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

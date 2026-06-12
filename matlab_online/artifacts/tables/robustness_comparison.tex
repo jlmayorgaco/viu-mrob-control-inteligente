@@ -1,0 +1,19 @@
+% Tabla de resultados - Act08 R2ET
+\begin{table}[H]
+\centering
+\caption{Robustez Fase~2: escenario nominal vs.\ severo ($+20\%$ demanda, $-15\%$ eficiencia de descarga). Mismos controladores, sin resintonizar.}
+\label{tab:robustness}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Método & IAE nom. & IAE robusto & Ocup. nom. & Ocup. rob. & Viol. rob. & Margen rob. \\
+\midrule
+PID & 11.41 & 64.66 & 1.744 & 2.718 & 0 & 0.282 \\
+Fuzzy & 37.21 & 127.7 & 2.197 & 2.775 & 0 & 0.225 \\
+DL & 25.83 & 61.63 & 1.711 & 2.725 & 0 & 0.275 \\
+QL & 26.13 & 32.13 & 1.762 & 1.874 & 0 & 1.126 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

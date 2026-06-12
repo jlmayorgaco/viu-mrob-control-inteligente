@@ -1,0 +1,18 @@
+% Tabla de resultados - Act08 R2ET
+\begin{table}[H]
+\centering
+\caption{Comparación directa de cada método inteligente respecto al PID-Aware. Valores de IAE y desbalance como razón frente al PID; productividad y energía como diferencia absoluta.}
+\label{tab:aware_improvement}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Método & IAE/PID & $\Delta$Prod. & Ahorro energ. & Desbal./PID \\
+\midrule
+Fuzzy & 3.26 & 0 & -0.12 & 1.09 \\
+DL & 2.26 & 0.15 & 0.11 & 3.91 \\
+QL & 2.29 & -2.55 & 5.71 & 1.55 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

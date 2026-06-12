@@ -1,0 +1,17 @@
+% Tabla de resultados - Act08 R2ET
+\begin{table}[H]
+\centering
+\caption{Entrenamiento Deep Learning: optimización directa sobre planta (método adjunto).}
+\label{tab:mlp_training}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+Fase & Arquitectura & Épocas & Escenarios & Val. & Test & IAE entren. & IAE val. & IAE test \\
+\midrule
+Servo & 4-64-32-16-8-1 & 800 & 25600 & 50 & 50 & 0.00406 & 0.00432 & 0.00432 \\
+Aware & 8-96-64-32-16-8-3 & 1200 & 19200 & 30 & 30 & 0.1989 & 0.1746 & 0.1746 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

@@ -1,0 +1,17 @@
+% Tabla de resultados - Act08 R2ET
+\begin{table}[H]
+\centering
+\caption{Fase~2 antes/después: PID escalar sin supervisor frente al PID supervisado, en escenario nominal y severo ($+20\%$ demanda, $-15\%$ eficiencia). Alarma = muestras con $n_i>2.7$.}
+\label{tab:aware_baseline}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Configuración & IAE nom. & Ocup. nom. & IAE severo & Ocup. sev. & Alarma sev. \\
+\midrule
+PID base (sin supervisor) & 13.01 & 1.744 & 112.7 & 3.636 & 20 \\
+PID-Aware (con supervisor) & 11.41 & 1.744 & 64.66 & 2.718 & 2 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
